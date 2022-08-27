@@ -1,0 +1,1 @@
+cat "C:\Program Files (x86)\Steam\steamapps\common\MGS_TPP\mod\ih_log.txt" -Tail 5 -Wait | where{$_ -match "messageId: (\d+),"}
