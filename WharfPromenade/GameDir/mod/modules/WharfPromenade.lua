@@ -1,6 +1,13 @@
 local this = {
     debugModule = true,
 }
+--[[ == RESOURCE NAMES ==
+Heroism
+    Fame Increased
+        [Holdups]
+GMP
+]]
+
 
 --[[ LANGSTRINGS ]]
 this.langStrings={
@@ -55,7 +62,7 @@ this.KnownRadioIDs = {
     [9]  = "Communications Radar [Antenna]",
     -- ...
     [11] = "Searchlight",
-    -- ...
+    [12] = "Surveillance Camera [Surveillance Camera]",
     [13] = "Target Container (Code Talker's Materials) [Container]",
     -- ...
     [15] = "IR-Sensors",
@@ -113,7 +120,7 @@ this.KnownRadioIDs = {
 }
 
 function this.WpGeneralPrint()
-    --InfCore.PrintInspect(ChetRippo,{varName="ChetRippo"})
+    InfCore.PrintInspect(TppScriptVars.GetTotalPlayTime(),{varName="GetTotalPlayTime"})
 end 
 
 -- igvars?
@@ -134,6 +141,7 @@ function this.HurtBird(damagedId, attackId, attackerId)
 
         InfCore.DebugPrint("Bird had a '"..equipName..'". Why? Funy.')--DEBUG
 
+        local number=1
         local linearMax=0.1
         local angularMax=4
         local dropOffsetY=1.2
@@ -156,7 +164,7 @@ function this.HurtBird(damagedId, attackId, attackerId)
 
         if dropPosition then
             dropPosition=Vector3(dropPosition[1],dropPosition[2]+dropOffsetY,dropPosition[3])
-            thing = TppPickable.DropItem({
+            local thing = TppPickable.DropItem({
                 equipId=equipId,
                 number=number,
                 position=dropPosition,
@@ -190,5 +198,5 @@ function this.Init(missionTable)
   this.messageExecTable = Tpp.MakeMessageExecTable(this.Messages())
 end
 
-this.OnReload = this.Init 
+this.OnReload = this.Init
 return this

@@ -872,9 +872,9 @@ local clone = function(t)
     for k, v in pairs(t) do rtn[k] = v end
     return rtn
 end
-function this.GetAvailableGMP(includeOnline)
+function this.GetAvailableGMP(excludeOnline)
     local totalGMP = TppMotherBaseManagement.GetGmp()
-    if Tpp.IsOnlineMode() and includeOnline then
+    if Tpp.IsOnlineMode() and excludeOnline then
         totalGMP = totalGMP - vars.mbmServerWalletGmp
     end
 
@@ -987,14 +987,14 @@ function this.BankDepositGMP()
     TppTerminal.UpdateGMP({gmp=-actionableGMP})
 end
 function this.BankWithdrawGMP()
-    local totalGMP = this.GetAvailableGMP()
+    local totalGMP = this.GetAvailableGMP(true)
     local maxWithdraw = this.CONSTS.MAX_LOCAL_GMP - totalGMP
     --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw), true, "debug")
 
     local actionableGMP = math.min(math.max(Ivars.crChetRippoBux:Get(),0), math.max(maxWithdraw,0))
 
     --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
-    
+    --InfCore.Log("totalGMP="..tostring(totalGMP)..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
     InfCore.Log("Withdrew From CRB [GMP +"..tostring(actionableGMP).."]", true, "debug")
     igvars.crBalance = igvars.crBalance - actionableGMP
 
@@ -1081,9 +1081,9 @@ function this.CrProvisionalShowerSniffCheck()
 
     -- outText
 
-    TppUiCommand.AnnounceLogView("smallFlyLevel="..tostring(Player.GetSmallFlyLevel())..",rawStink="..tostring(vars.passageSecondsSinceOutMB)..",canBathe="..tostring(canBathe))
-    TppUiCommand.AnnounceLogView("daysUnbathed="..tostring(daysUnbathed)..",previousUse="..tostring(previousUse)..",now="..tostring(currentUse))
-    TppUiCommand.AnnounceLogView("timeBetweenUse="..tostring(timeBetweenUse)..",unstinkAmount="..tostring(unstinkAmount))
+    --TppUiCommand.AnnounceLogView("smallFlyLevel="..tostring(Player.GetSmallFlyLevel())..",rawStink="..tostring(vars.passageSecondsSinceOutMB)..",canBathe="..tostring(canBathe))
+    --TppUiCommand.AnnounceLogView("daysUnbathed="..tostring(daysUnbathed)..",previousUse="..tostring(previousUse)..",now="..tostring(currentUse))
+    --TppUiCommand.AnnounceLogView("timeBetweenUse="..tostring(timeBetweenUse)..",unstinkAmount="..tostring(unstinkAmount))
     TppUiCommand.AnnounceLogView(outText)
 end
 
@@ -1091,18 +1091,19 @@ function this.OnFadeInForShower()
     this.DemoOverride()
 end
 
-function this.OnFadeIn()
+function this.OnFadeInForGMPLoss()
+    InfCore.Log("Death Fade In: "..tostring(Ivars.crDeathGmpLossEnable:Is(1)), true, "debug")
     if Ivars.crDeathGmpLossEnable:Is(0) then return end
-    local totalGMP = this.GetAvailableGMP(Ivars.crDeathGmpLossIncludeGlobal:Is(0))
+    local totalGMP = this.GetAvailableGMP(not Ivars.crDeathGmpLossIncludeGlobal:Is(1))
 
 	if this.vars.crDeathGmpLossValidDeath and totalGMP > 0 then
         local cost = math.floor(totalGMP * (Ivars.crDeathGmpLossPercentage:Get()/100))
 
         if cost > 0 then
             TppTerminal.UpdateGMP({gmp=-cost})
-            TppUiCommand.AnnounceLogView("[Medical]: Resuscitation Supplies [GMP -" .. tostring(cost) .. "]")
+            TppUiCommand.AnnounceLogView("Resuscitation Supplies: [GMP -" .. tostring(cost) .. "]")
         end
-		TppMission.UpdateCheckPointAtCurrentPosition()
+		--TppMission.UpdateCheckPointAtCurrentPosition()
 	end
 	this.vars.crDeathGmpLossValidDeath = false
 end
@@ -1116,13 +1117,16 @@ function this.OnFulton(gameObjectId, gimmckInstance, gimmckDataSet, staffID)
 end
 
 function this.OnDeath(playerId,deathTypeStr32)
-    -- InfCore.Log("[dead] playerId="..tostring(playerId)..",deathType="..deathTypeStr32, true, "debug")
+    InfCore.Log("[dead] playerId="..tostring(playerId)..",deathType="..deathTypeStr32, true, "debug")
     if Ivars.crDeathGmpLossEnable:Is(0) then return end
 	if (deathTypeStr32~=InfCore.StrCode32("FallDeath")) and 
 		(deathTypeStr32~=InfCore.StrCode32("Suicide")) and 
 		(not TppMission.IsFOBMission(vars.missionCode)) then
+            InfCore.Log("[dead] was valid", true, "debug")
 		this.vars.crDeathGmpLossValidDeath = true
-	end
+    else
+        InfCore.Log("[dead] was not valid", true, "debug")
+    end
 end
 
 function this.SyncLocalTime()
@@ -1166,13 +1170,14 @@ function this.EmergencySuppressorBuyNow()
 end
 function this.GiveSuppressor()
     local cost = Ivars.crEmergencySuppliesSuppressorsCost:Get()
-    if Ivars.crEmergencySuppliesSuppressorsEnable:Is(0) or this.GetAvailableGMP() < cost then return end
+    if Ivars.crEmergencySuppliesSuppressorsEnable:Is(0) or this.GetAvailableGMP(true) < cost then return end
     local equipName = "EQP_AB_Suppressor"--=categoryTable[math.random(#categoryTable)]
     local equipId=TppEquip[equipName]
 
     local linearMax=0.1
     local angularMax=4
     local dropOffsetY=1.2
+    local number = 1
 
     -- tax fraud scam please ignore
     --[[
@@ -1188,7 +1193,7 @@ function this.GiveSuppressor()
     end
     if dropPosition then
         dropPosition=Vector3(dropPosition[1],dropPosition[2]+dropOffsetY,dropPosition[3])
-        thing = TppPickable.DropItem({
+        local thing = TppPickable.DropItem({
             equipId=equipId,
             number=number,
             position=dropPosition,
@@ -1242,10 +1247,15 @@ function this.Messages()
             {msg="SuppressorIsBroken",func=this.GiveSuppressor},
         },
         UI = {
-            {msg="EndFadeIn",sender="FadeInOnStartMissionGame",func=this.OnFadeIn}, 
-            {msg="EndFadeIn",sender="FadeInOnGameStart",func=this.OnFadeIn},
-            {msg="EndFadeIn",sender="FadeInOnStartMissionGame",func=this.OnFadeInForShower}, 
-            {msg="EndFadeIn",sender="FadeInOnGameStart",func=this.OnFadeInForShower},
+            {msg="EndFadeIn",sender="FadeInOnStartMissionGame",func=function(...)
+                this.OnFadeInForGMPLoss(...)
+                this.OnFadeInForShower(...)
+            end,},
+            {msg="EndFadeIn",sender="FadeInOnGameStart",func=function(...)
+                this.OnFadeInForGMPLoss(...)
+                this.OnFadeInForShower(...)
+            end,},
+
             {msg="EndFadeOut",sender="OnEstablishMissionClearFadeOut",func=this.DemoOverride},
         },
     })
