@@ -5,6 +5,7 @@
             - Fixed bug preventing the rarity mode paying out correctly.
             - Added detailed resource logging mode in the iDROID.
 	1.2		- Corrected some vehicles being identified as a Gerbil.
+            - Made UI prints more in-line with vanilla iDROID messages.
 	        - Added additional radio information to the database.
 
 ]]
@@ -104,6 +105,19 @@
    /50/
     51  HUEY'S EXILE
 ]]
+
+local formatLikeVanilla = function(thingName, quantity)
+    local out = "["..thingName.."]"
+    if quantity > 0 then
+        out = out .. " x " .. tostring(quantity)
+    end
+    return out
+end
+
+local formatLikeBalance = function(thingName, quantity)
+    local sign = (quantity > 0 and "+") or (quantity < 0 and "-") or ""
+    return "["..thingName.." "..sign..tostring(math.abs(quantity)).."]"
+end
 
 local this = {
     debugModule = false,
@@ -920,6 +934,7 @@ this.registerIvars={
     "farUseWeightedRandom",
     "farRarityResourceScale",
     "farLogResources",
+    "farLogDetailedHerbCounts",
 }
 this.farUseWeightedRandom={
     save=IvarProc.CATEGORY_EXTERNAL,
@@ -939,6 +954,13 @@ this.farLogResources={
     default=1,
     settingNames="set_switch",
 }
+this.farLogDetailedHerbCounts={
+    save=IvarProc.CATEGORY_EXTERNAL,
+    range=Ivars.switchRange,
+    default=0,
+    settingNames="set_switch",
+}
+
 
 --[[ LANGSTRINGS ]]
 this.langStrings={
@@ -947,6 +969,7 @@ this.langStrings={
         farUseWeightedRandom="Use weighted random",
         farRarityResourceScale="Rarity based resource scaling",
         farLogResources="Log resource collection",
+        farLogDetailedHerbCounts="Log detailed herb counts",
     },--eng
     help={
         eng={
@@ -954,6 +977,7 @@ this.langStrings={
             farUseWeightedRandom="Whether to use a random chance to roll for each possible plant rather than restricting it strictly to matching ranks.",
             farRarityResourceScale="A multiplier on the amount of resources received from an animal. This applies to every rarity tier.",
             farLogResources="Whether to log in the iDROID the resources an animal collects for us.",
+            farLogDetailedHerbCounts="List every resource gained from an extraction when it happens, as opposed to a summarized count. You will still get a detailed count when those resources get to Mother Base, as usual.",
         },
     }--help
 }--langStrings
@@ -968,6 +992,7 @@ this.farMenu={
         "Ivars.farUseWeightedRandom",
         "Ivars.farRarityResourceScale",
         "Ivars.farLogResources",
+        "Ivars.farLogDetailedHerbCounts",
     },
 }
 
@@ -1056,24 +1081,28 @@ function this.GiveResource(gameId, animalId)
 
         local resourceScale = (Ivars.farRarityResourceScale:Get()/100)
         local thingsGot = {}
-        local gotAny = false
+        local totalGot = 0
         for item, quantity in pairs(payout) do
             local resItem = TppTerminal.RESOURCE_INFORMATION_TABLE[item]
             if resItem ~= nil then
                 local c = math.floor(quantity * resourceScale)
 
                 if c > 0 then
-                    gotAny = true
-                    table.insert(thingsGot, c .. "x" .. this.plantNames[item])
+                    totalGot = totalGot + c
+                    table.insert(thingsGot, formatLikeVanilla(this.plantNames[item], c))
                     TppMotherBaseManagement.AddTempResource({resource=resItem.resourceName,count=c})
                 end
             end
         end
         if Ivars.farLogResources:Is(1) then
-            if gotAny then
-                InfCore.Log("[Support]: Captured animal '" .. animalName .. "' had resources: " .. table.concat(thingsGot, ", "), true)
+            if totalGot > 0 then
+                if Ivars.farLogDetailedHerbCounts:Is(1) then
+                    InfCore.Log("Rescued Wild Animal [" .. animalName .. "]: " .. table.concat(thingsGot, ", "), true)
+                else
+                    InfCore.Log("Rescued Wild Animal [" .. animalName .. "]: " .. formatLikeVanilla("Medicinal Herbs", totalGot), true)
+                end
             else
-                InfCore.Log("[Support]: Captured animal '" .. animalName .. "' had no resources.", true)
+                InfCore.Log("Rescued Wild Animal [" .. animalName .. "]: No Resources", true)
             end
         end
 
@@ -1152,13 +1181,11 @@ end
 
 
 function this.Messages()
-    local dinko = Tpp.StrCode32Table({
+    return Tpp.StrCode32Table({
         GameObject={
             {msg="Fulton",func=this.OnFulton},
         },
     })
-    InfCore.PrintInspect(dinko)
-    return dinko
 end
 
 function this.OnMessage(sender, messageId, arg0, arg1, arg2, arg3, strLogText)

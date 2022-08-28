@@ -7,9 +7,7 @@ addFlag=16?
 ]]
 
 local this = {
-    debugModule = false,
-
-    validDeath = false,
+    debugModule = true,
 }
 
 this.CONSTS = {
@@ -40,7 +38,9 @@ this.CONSTS = {
     MEDICINAL_PLANT_VALUE_DIGITALIS_LUTEA    = 5000,
     MEDICINAL_PLANT_VALUE_HAOMA              = 5000,
 
-
+    HYGIENE_EVENT_TOILET   = "toilet",
+    HYGIENE_EVENT_SHOWER   = "shower",
+    HYGIENE_EVENT_DUMPSTER = "dumpster",
 }
 this.ivarsPersist = {
     crBalance = 0,
@@ -60,6 +60,7 @@ this.vars = {
     timeMinuteRandomMin = math.huge,
     timeMinuteRandomMax = -math.huge,
 }
+
 this.infiniteRange={min=-math.huge,max=math.huge,increment=1}
 this.ultraVars = {
     {
@@ -335,6 +336,30 @@ this.ultraVars = {
                         help = "How many minutes (irl, regardless of time scale) between uses of a toilet as a provisional shower.",
                     },
                     {
+                        name = "crProvisionalShowerDumpsterEnable",
+                        type = "ivar",
+                        setting = {
+                            save=IvarProc.CATEGORY_EXTERNAL,
+                            range=Ivars.switchRange,
+                            default=1,
+                            settingNames="set_switch",
+                        },
+                        description = "Dumpsters Make You Stinky",
+                        help = "Do you want to get dirty, and keep Ocelot away from you?",
+                    },
+                    {
+                        name = "crProvisionalShowerDumpsterDirtinessIncreaseDeployTime",
+                        type = "ivar",
+                        setting = {
+                            save=IvarProc.EXTERNAL,
+                            default=4,
+                            range={max=72,min=0,increment=1},
+                            noBounds=true,
+                        },
+                        description = "Dumpster Dirtiness Increase Time",
+                        help = "How much stinkier you get for jumping into a dumpster (in in-game hours).",
+                    },
+                    {
                         name = "crProvisionalShowerReallowQuietShowerCutscene",
                         type = "ivar",
                         setting = {
@@ -345,6 +370,15 @@ this.ultraVars = {
                         },
                         description = "Reallow Quiet Cutscene",
                         help = "Forcibly toggle the flag to replay the cutscene with Quiet in Mother Base by disabling the flag for having seen it, every time it is active.",
+                    },
+                    {
+                        name = "crProvisionalShowerSniffCheck",
+                        type = "command",
+                        setting = {
+                            command = "ChetRippo.CrProvisionalShowerSniffCheck"
+                        },
+                        description = "Sniff Check",
+                        help = "Get intel on how stinky you are.",
                     },
                 },
             },
@@ -811,7 +845,7 @@ this.GOREWriteTable = function(fileName,header,t)
       all=header.."\r\n"..all
   end
 
-  this.WriteString(fileName,all)
+  this.GOREWriteString(fileName,all)
 end
 this.GOREDumpAllToFile = function()
   this.GOREWriteTable(InfCore.gamePath..InfCore.modSubPath .. "/gore_dump_" .. os.time() .. ".lua", "-- GoreModule.lua dump", {
@@ -841,7 +875,7 @@ end
 function this.GetAvailableGMP(includeOnline)
     local totalGMP = TppMotherBaseManagement.GetGmp()
     if Tpp.IsOnlineMode() and includeOnline then
-        totalGMP = totalGMP - vars.mbmServerWalletGmp 
+        totalGMP = totalGMP - vars.mbmServerWalletGmp
     end
 
     return totalGMP
@@ -852,7 +886,7 @@ function this.RecomputeDeployTweaks()
     if this.vars.interceptedDeployMissionBasicParams ~= nil then
         -- InfCore.Log("%=%=%=% ben of drill", true, "debug")
         local live = this.vars.livingDeployMissionBasicParams
-    
+
         live.missionListRefreshTimeMinute = Ivars.crDeployTweaksBPmissionListRefreshTimeMinute:Get()
         live.drawCountPerSr = Ivars.crDeployTweaksBPdrawCountPerSr:Get()
         live.drawCountPerR = Ivars.crDeployTweaksBPdrawCountPerR:Get()
@@ -967,36 +1001,91 @@ function this.BankWithdrawGMP()
     TppTerminal.UpdateGMP({gmp=actionableGMP})
 end
 
+function this.HandleHygieneEvent(hygieneEvent)
+    if hygieneEvent == this.CONSTS.HYGIENE_EVENT_SHOWER then
+        igvars.crProvisionalShowerLastUsed = TppScriptVars.GetTotalPlayTime()
+        -- we don't need to do anything because they already got showered
+    elseif hygieneEvent == this.CONSTS.HYGIENE_EVENT_TOILET then
+        this.CleanPlayer()
+    elseif hygieneEvent == this.CONSTS.HYGIENE_EVENT_DUMPSTER then
+        this.DirtyPlayer()
+    end
+end
 function this.CleanPlayer() -- cheat
     if Ivars.crProvisionalShowerEnable:Is(0) then return end
     local previousUse = igvars.crProvisionalShowerLastUsed or 0
-	local currentUse = os.time()
+	local currentUse = TppScriptVars.GetTotalPlayTime()
     local timeBetweenUse = math.max(60*Ivars.crProvisionalShowerWallMinutesBetweenUses:Get(),0)
-    --InfCore.Log("[shower] prev="..tostring(previousUse)..",current="..tostring(currentUse)..",timeBetween="..tostring(timeBetweenUse), true, "debug")
     if (currentUse - previousUse) > timeBetweenUse then
         igvars.crProvisionalShowerLastUsed = currentUse
+        local mostRecentTimeOut = vars.passageSecondsSinceOutMB
         local logText = "Physically and Mentally Refreshed"
         Player.ResetDirtyEffect()
         Player.SetWetEffect()
 
-        vars.passageSecondsSinceOutMB = math.max(0, vars.passageSecondsSinceOutMB - (Ivars.crProvisionalShowerReduceDeployTime:Get()*60*60))
-        -- 60*60*24*3 
+        local newTimeOut = math.max(0, mostRecentTimeOut - (Ivars.crProvisionalShowerReduceDeployTime:Get()*60*60))
+        vars.passageSecondsSinceOutMB = newTimeOut -- 60*60*24*3 
         if vars.passageSecondsSinceOutMB > 0 then
             logText = "Partially " .. logText
+        else
+            -- in case anyone is listening on this
+            -- for some reason
+            TppPlayer.Refresh()
         end
         TppUiCommand.AnnounceLogView(logText)
     end
 end
+function this.DirtyPlayer()
+    if Ivars.crProvisionalShowerDumpsterEnable:Is(0) then return end
+
+    local mostRecentTimeOut = vars.passageSecondsSinceOutMB
+    local logText = "Physically and Mentally Drained"
+    Player.SetWetEffect()
+
+    local newTimeOut = math.max(0, mostRecentTimeOut + (Ivars.crProvisionalShowerDumpsterDirtinessIncreaseDeployTime:Get()*60*60))
+    vars.passageSecondsSinceOutMB = newTimeOut -- 60*60*24*3 
+    if vars.passageSecondsSinceOutMB >= (60*60*24*3) then
+        logText = "Completely " .. logText
+    end
+    TppUiCommand.AnnounceLogView(logText)
+end
 
 
 function this.DemoOverride()
-    if Ivars.crProvisionalShowerReallowQuietShowerCutscene:Get(1) and 
+    if Ivars.crProvisionalShowerReallowQuietShowerCutscene:Get(1) and
         TppDemo.IsPlayedMBEventDemo("SnakeHasBadSmell_000") then
         TppDemo.ClearPlayedMBEventDemoFlag("SnakeHasBadSmell_000")
     end
 end
 
+function this.CrProvisionalShowerSniffCheck()
+    local daysUnbathed = (vars.passageSecondsSinceOutMB/60/60/24)
+    local unstinkAmount = Ivars.crProvisionalShowerReduceDeployTime:Get()*60*60
 
+    local previousUse = igvars.crProvisionalShowerLastUsed or 0
+	local currentUse = TppScriptVars.GetTotalPlayTime()
+    local timeBetweenUse = math.max(60*Ivars.crProvisionalShowerWallMinutesBetweenUses:Get(),0)
+    local canBathe = (currentUse - previousUse) > timeBetweenUse
+
+    local stinky = Player.GetSmallFlyLevel() >= 1
+    local outText = "Intel Stench Report: "
+    if daysUnbathed >= 3 or stinky then
+        outText = outText .. "You stink. You should have bathed "..math.ceil(daysUnbathed).." day(s) ago."
+    elseif daysUnbathed < 1 then
+        outText = outText .. "You're good! You've still got "..math.floor(24-(daysUnbathed*24)).." hour(s) to go."
+    elseif daysUnbathed < 3 then
+        outText = outText .. "Not good. Seek a shower in the next "..math.floor(72-(daysUnbathed*24)).." hour(s), or else!"
+    else
+        outText = outText .. "What have you done?!"
+    end
+
+    -- outText
+
+    TppUiCommand.AnnounceLogView("smallFlyLevel="..tostring(Player.GetSmallFlyLevel())..",rawStink="..tostring(vars.passageSecondsSinceOutMB)..",canBathe="..tostring(canBathe))
+    TppUiCommand.AnnounceLogView("daysUnbathed="..tostring(daysUnbathed)..",previousUse="..tostring(previousUse)..",now="..tostring(currentUse))
+    TppUiCommand.AnnounceLogView("timeBetweenUse="..tostring(timeBetweenUse)..",unstinkAmount="..tostring(unstinkAmount))
+    TppUiCommand.AnnounceLogView(outText)
+end
 
 function this.OnFadeInForShower()
     this.DemoOverride()
@@ -1138,7 +1227,18 @@ function this.Messages()
         },
         Player={
             {msg="Dead",func=this.OnDeath, option={isExecGameOver=true}},
-            {msg="OnPlayerToilet",func=this.CleanPlayer},
+
+            -- [[ == PROVISIONAL SHOWERS == ]]
+            {msg="PlayerShowerEnd",func=function(...)
+                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_SHOWER, ...)
+            end,},
+            {msg="OnPlayerToilet",func=function(...)
+                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_TOILET, ...)
+            end,},
+            {msg="OnPlayerTrashBox",func=function(...)
+                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_DUMPSTER, ...)
+            end,},
+
             {msg="SuppressorIsBroken",func=this.GiveSuppressor},
         },
         UI = {

@@ -4,6 +4,7 @@ For modders: Also contains a wealth of information for each animal.
 
 1.2:
 - Corrected some vehicles being identified as a Gerbil.
+- Made UI prints more in-line with vanilla iDROID messages.
 - Added additional radio information to the database.
 1.1:
 - Added weighted random distribution. Higher yields, occasionally.

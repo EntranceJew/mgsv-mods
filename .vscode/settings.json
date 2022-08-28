@@ -1,0 +1,31 @@
+{
+    "Lua.diagnostics.globals": [
+        "GameObject",
+        "InfCore",
+        "InfLookup",
+        "Ivars",
+        "IvarProc",
+        "Tpp",
+        "TppMission",
+        "TppCollection",
+        "TppGameObject",
+        "TppMotherBaseManagement",
+        "TppMission",
+        "Tpp",
+        "InfLookup",
+        "GameObject",
+        "InfCore",
+        "Ivars",
+        "TppMotherBaseManagement",
+        "TppTerminal",
+        "IvarProc",
+        "TppGameObject",
+        "TppResult",
+        "InfMain",
+        "InfMenuCommands",
+        "svars",
+        "gvars",
+        "mvars",
+        "InfInspect"
+    ]
+}
