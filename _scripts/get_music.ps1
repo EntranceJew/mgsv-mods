@@ -1,0 +1,1 @@
+yt-dlp --extract-audio --audio-format mp3 -a input.txt -o "C:\Program Files (x86)\Steam\steamapps\common\MGS_TPP\CustomSoundtrack\%(title)s.%(ext)s"
