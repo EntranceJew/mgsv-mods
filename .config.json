@@ -1,5 +1,8 @@
 {
     "makebite_path": "C:\\projects\\mgsv\\utils\\snakebite\\makebite.exe",
     "mgsvtpp_path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\MGS_TPP\\",
-    "sevenzip_path": "C:\\ProgramData\\chocolatey\\bin\\7z.exe"
+    "sevenzip_path": "C:\\ProgramData\\chocolatey\\bin\\7z.exe",
+    "hashwrangler_path": "C:\\projects\\mgsv\\utils\\hashwrangler\\HashWrangler.exe",
+    "hashwrangler_target_hashes": "C:\\projects\\mgsv\\utils\\hashwrangler\\hashes.txt",
+    "strings_path": "C:\\projects\\mgsv\\repos\\mgsv-lookup-strings\\Strings"
 }
