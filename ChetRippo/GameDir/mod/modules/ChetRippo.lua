@@ -6,6 +6,25 @@ addFlag=16?
 
 ]]
 
+--[[
+    OVERRIDES UNTIL IH UPDATES
+]]
+-- https://stackoverflow.com/a/1283608
+InfUtil.MergeTable = function(t1, t2)
+    for k,v in pairs(t2) do
+        if type(v) == "table" then
+            if type(t1[k] or false) == "table" then
+                this.MergeTable(t1[k] or {}, t2[k] or {})
+            else
+                t1[k] = v
+            end
+        else
+            t1[k] = v
+        end
+    end
+    return t1
+end
+
 local this = {
     debugModule = true,
 }
@@ -44,16 +63,18 @@ this.CONSTS = {
 }
 this.ivarsPersist = {
     crBalance = 0,
-    crProvisionalShowerLastUsed = 0,
+    crHygieneProvisionalShowerLastUsed = 0,
 }
 this.wrap = {}
 this.vars = {
     crDeathGmpLossValidDeath = false,
-    
+
     interceptedDeployMissionBasicParams = {},
     livingDeployMissionBasicParams = {},
     interceptedDeployMissionParams = {},
     livingDeployMissionParams = {},
+    interceptedResourceParam = {},
+    livingResourceParam = {},
 
     timeMinuteMin = math.huge,
     timeMinuteMax = -math.huge,
@@ -70,8 +91,7 @@ this.ultraVars = {
         description = "Chet Rippo menu",
         help = "A collection of funny little things.",
         children = {
-            {
-                name = "crBankMenu",
+            {name = "crBankMenu",
                 type = "menu",
                 setting = {},
                 description = "Chet Rippo Bank menu",
@@ -115,65 +135,25 @@ this.ultraVars = {
                         description = "Withdraw CRB for GMP",
                         help = "Convert Chet Rippo Bux into GMP.",
                     },
-                },
-            },
-            {name = "crInfinityMenu",
-                type = "menu",
-                setting = {},
-                description = "Infinity menu",
-                help = "A sub-menu for infinite related settings.",
-                children = {
                     {
-                        name = "crInfinityFultons",
+                        name = "crChetRippoBuxToAbsolition",
                         type = "ivar",
                         setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=1,
-                            settingNames="set_switch",
+                            save=IvarProc.EXTERNAL,
+                            default=1000,
+                            range=this.infiniteRange,
                         },
-                        description = "Enable Infinite Fultons",
-                        help = "The indicator in-game may appear incorrectly, but you will have infinite fultons.",
+                        description = "CRB To Absolition",
+                        help = "How many CRB you can donate for repentence.",
                     },
-                },
-            },
-            {name = "crStaffMenu",
-                type = "menu",
-                setting = {},
-                description = "Staff menu",
-                help = "A sub-menu for MB Staff related settings.",
-                children = {
                     {
-                        name = "crStaffAllowVolunteers",
-                        type = "ivar",
+                        name = "bankDonateCRB",
+                        type = "command",
                         setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=1,
-                            settingNames="set_switch",
+                            command = "ChetRippo.BankDonateCRB"
                         },
-                        description = "Allow Volunteers",
-                        help = "Whether or not volunteers will appear.",
-                    },
-                },
-            },
-            {name = "crResultMenu",
-                type = "menu",
-                setting = {},
-                description = "Results menu",
-                help = "A sub-menu for rank and results related settings.",
-                children = {
-                    {
-                        name = "crResultAllowRankRestrictedItems",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=0,
-                            settingNames="set_switch",
-                        },
-                        description = "Allow Rank-Restricted Items",
-                        help = "Whether or not your rank will be docked for having a rank restricting item.",
+                        description = "Donate CRB For Absolition",
+                        help = "Charitably give your CRB away.",
                     },
                 },
             },
@@ -183,8 +163,7 @@ this.ultraVars = {
                 description = "Miscellenous menu",
                 help = "A sub-menu for settings I couldn't categorize.",
                 children = {
-                    {
-                        name = "crMiscSyncLocalTime",
+                    {name = "crMiscSyncLocalTime",
                         type = "ivar",
                         setting = {
                             save=IvarProc.CATEGORY_EXTERNAL,
@@ -196,8 +175,7 @@ this.ultraVars = {
                         help = "If the time isn't sync'd, make it.",
                     },
                     -- {min=-math.huge,max=math.huge,increment=1}
-                    {
-                        name = "crMiscSyncLocalTimeOffset",
+                    {name = "crMiscSyncLocalTimeOffset",
                         type = "ivar",
                         setting = {
                             save=IvarProc.CATEGORY_EXTERNAL,
@@ -206,6 +184,62 @@ this.ultraVars = {
                         },
                         description = "Local Time Hour Offset",
                         help = "If the game is too bright based on local time.",
+                    },
+                    {name = "crStaffAllowVolunteers",
+                        -- was in: crStaffMenu
+                        type = "ivar",
+                        setting = {
+                            save=IvarProc.CATEGORY_EXTERNAL,
+                            range=Ivars.switchRange,
+                            default=1,
+                            settingNames="set_switch",
+                        },
+                        description = "Allow Volunteers",
+                        help = "Whether or not volunteers will appear.",
+                    },
+                    {name = "crResultAllowRankRestrictedItems",
+                        type = "ivar",
+                        setting = {
+                            save=IvarProc.CATEGORY_EXTERNAL,
+                            range=Ivars.switchRange,
+                            default=0,
+                            settingNames="set_switch",
+                        },
+                        description = "Allow Rank-Restricted Items",
+                        help = "Whether or not your rank will be docked for having a rank restricting item.",
+                    },
+                    {name = "crCombatSupportHeliFlareWarps",
+                        type = "ivar",
+                        setting = {
+                            save=IvarProc.CATEGORY_EXTERNAL,
+                            range=Ivars.switchRange,
+                            default=0,
+                            settingNames="set_switch",
+                        },
+                        description = "Support Heli Flare Warps",
+                        help = "Allow you to teleport to the location a Support Heli flare deploys.\nSupport Heli will still appear.\nWatch out for the smoke!",
+                    },
+                    {name = "crCombatBaitZombifiesSoldiers",
+                        type = "ivar",
+                        setting = {
+                            save=IvarProc.CATEGORY_EXTERNAL,
+                            range=Ivars.switchRange,
+                            default=0,
+                            settingNames="set_switch",
+                        },
+                        description = "Bait Zombifies Soldiers",
+                        help = "A direct hit with bait will cause soldiers to become zombified.",
+                    },
+                    {name = "crCombatBirdsDropItems",
+                        type = "ivar",
+                        setting = {
+                            save=IvarProc.CATEGORY_EXTERNAL,
+                            range=Ivars.switchRange,
+                            default=0,
+                            settingNames="set_switch",
+                        },
+                        description = "Birds Drop Items",
+                         help = "Hitting a bird will cause them to drop a throwable item.\nThey love collecting trinkets.",
                     },
                 },
             },
@@ -232,7 +266,7 @@ this.ultraVars = {
                         type = "ivar",
                         setting = {
                             save=IvarProc.EXTERNAL,
-                            default=1000,
+                            default=2000,
                             range=this.infiniteRange,
                         },
                         description = "Emergency Suppressor Cost",
@@ -293,14 +327,14 @@ this.ultraVars = {
                     },
                 },
             },
-            {name = "crProvisionalShowersMenu",
+            {name = "crHygieneMenu",
                 type = "menu",
                 setting = {},
-                description = "Provisional Showers menu",
+                description = "Hygiene menu",
                 help = "A sub-menu for toilet and shower related settings.",
                 children = {
                     {
-                        name = "crProvisionalShowerEnable",
+                        name = "crHygieneProvisionalShowerEnable",
                         type = "ivar",
                         setting = {
                             save=IvarProc.CATEGORY_EXTERNAL,
@@ -312,7 +346,7 @@ this.ultraVars = {
                         help = "Do you want to get clean when you're on the john?",
                     },
                     {
-                        name = "crProvisionalShowerReduceDeployTime",
+                        name = "crHygieneProvisionalShowerReduceDeployTime",
                         type = "ivar",
                         setting = {
                             save=IvarProc.EXTERNAL,
@@ -324,7 +358,7 @@ this.ultraVars = {
                         help = "How much each shower reduces your time deployed (in in-game hours).",
                     },
                     {
-                        name = "crProvisionalShowerWallMinutesBetweenUses",
+                        name = "crHygieneProvisionalShowerWallMinutesBetweenUses",
                         type = "ivar",
                         setting = {
                             save=IvarProc.EXTERNAL,
@@ -336,7 +370,7 @@ this.ultraVars = {
                         help = "How many minutes (irl, regardless of time scale) between uses of a toilet as a provisional shower.",
                     },
                     {
-                        name = "crProvisionalShowerDumpsterEnable",
+                        name = "crHygieneDumpsterEnable",
                         type = "ivar",
                         setting = {
                             save=IvarProc.CATEGORY_EXTERNAL,
@@ -348,7 +382,7 @@ this.ultraVars = {
                         help = "Do you want to get dirty, and keep Ocelot away from you?",
                     },
                     {
-                        name = "crProvisionalShowerDumpsterDirtinessIncreaseDeployTime",
+                        name = "crHygieneDumpsterDirtinessIncreaseDeployTime",
                         type = "ivar",
                         setting = {
                             save=IvarProc.EXTERNAL,
@@ -360,7 +394,7 @@ this.ultraVars = {
                         help = "How much stinkier you get for jumping into a dumpster (in in-game hours).",
                     },
                     {
-                        name = "crProvisionalShowerReallowQuietShowerCutscene",
+                        name = "crHygieneReallowQuietShowerCutscene",
                         type = "ivar",
                         setting = {
                             save=IvarProc.CATEGORY_EXTERNAL,
@@ -372,10 +406,10 @@ this.ultraVars = {
                         help = "Forcibly toggle the flag to replay the cutscene with Quiet in Mother Base by disabling the flag for having seen it, every time it is active.",
                     },
                     {
-                        name = "crProvisionalShowerSniffCheck",
+                        name = "crHygieneSniffCheck",
                         type = "command",
                         setting = {
-                            command = "ChetRippo.CrProvisionalShowerSniffCheck"
+                            command = "ChetRippo.CrHygieneSniffCheck"
                         },
                         description = "Sniff Check",
                         help = "Get intel on how stinky you are.",
@@ -664,6 +698,47 @@ this.ultraVars = {
                     },
                 },
             },
+            -- [[ == NOT READY == ]]
+            --[[
+            {name = "crInfinityMenu",
+                type = "menu",
+                setting = {},
+                description = "Infinity menu",
+                help = "A sub-menu for infinite related settings.",
+                children = {
+                    {
+                        name = "crInfinityFultons",
+                        type = "ivar",
+                        setting = {
+                            save=IvarProc.CATEGORY_EXTERNAL,
+                            range=Ivars.switchRange,
+                            default=1,
+                            settingNames="set_switch",
+                        },
+                        description = "Enable Infinite Fultons",
+                        help = "The indicator in-game may appear incorrectly, but you will have infinite fultons.",
+                    },
+                },
+            },
+             {name = "crStaffMenu",
+                type = "menu",
+                setting = {},
+                description = "Staff menu",
+                help = "A sub-menu for MB Staff related settings.",
+                children = {
+                    
+                },
+            },
+            {name = "crResultMenu",
+                type = "menu",
+                setting = {},
+                description = "Results menu",
+                help = "A sub-menu for rank and results related settings.",
+                children = {
+                    
+                },
+            },
+            ]]
             -- [[ == DEBUG == ]]
             {name = "crDebugMenu",
                 type = "menu",
@@ -748,6 +823,26 @@ end
 
 --[[ === EVERYTHING ABOVE WAS BOILERPLATE THIS IS WHERE THE REAL CODE LIVES === ]]
 --[[ === UTILITY === ]]
+local clone = function(t)
+    local rtn = {}
+    for k, v in pairs(t) do rtn[k] = v end
+    return rtn
+end
+local formatLikeBalance = function(thingName, quantity)
+    local sign = (quantity > 0 and "+") or (quantity < 0 and "-") or ""
+    return "["..thingName.." "..sign..tostring(math.abs(quantity)).."]"
+end
+function this.MapValue(val, inMin, inMax, outMin, outMax)
+    return outMin + (outMax - outMin) * ((val-inMin)/(inMax-inMin))
+end
+function this.GetAvailableGMP(excludeOnline)
+    local totalGMP = TppMotherBaseManagement.GetGmp()
+    if Tpp.IsOnlineMode() and excludeOnline then
+        totalGMP = totalGMP - vars.mbmServerWalletGmp
+    end
+
+    return totalGMP
+end
 
 --[[ === ~~~ GORE: for debugging w/o IHTearDown ~~~ === ]]
 --this.GORE = {}
@@ -863,23 +958,6 @@ this.GORESaveCheckPoint = function()
   InfMenuCommands.CheckPointSave()
 end
 
-function this.MapValue(val, inMin, inMax, outMin, outMax)
-    return outMin + (outMax - outMin) * ((val-inMin)/(inMax-inMin))
-end
-
-local clone = function(t)
-    local rtn = {}
-    for k, v in pairs(t) do rtn[k] = v end
-    return rtn
-end
-function this.GetAvailableGMP(excludeOnline)
-    local totalGMP = TppMotherBaseManagement.GetGmp()
-    if Tpp.IsOnlineMode() and excludeOnline then
-        totalGMP = totalGMP - vars.mbmServerWalletGmp
-    end
-
-    return totalGMP
-end
 
 function this.RecomputeDeployTweaks()
     -- InfCore.Log("#&#&#&# we are recomputing Deploy Tweaks", true, "debug")
@@ -904,10 +982,10 @@ function this.RecomputeDeployTweaks()
         live.deadRateMax = Ivars.crDeployTweaksBPdeadRateMax:Get()
         live.deadRateUpDownCorrection = Ivars.crDeployTweaksBPdeadRateUpDownCorrection:Get()
         live.teamStaffCountMin = Ivars.crDeployTweaksBPteamStaffCountMin:Get()
-    
-        InfCore.PrintInspect(live,{varName="$+$+$+$ Basic Mission Params"})
-    
-        this.wrap.TppMotherBaseManagement__RegisterDeployBasicParam(live)
+
+        --InfCore.PrintInspect(live,{varName="$+$+$+$ Basic Mission Params"})
+
+        this.wrap.TppMotherBaseManagement.RegisterDeployBasicParam(live)
     end
 
     for mission_id, mission_params in pairs(this.vars.interceptedDeployMissionParams) do
@@ -971,21 +1049,24 @@ function this.RecomputeDeployTweaks()
     end
     --TppMotherBaseManagement.ResetDeploySvars()
 end
+
 function this.BankPrintGMP()
-    InfCore.Log("Current Balance CRB [GMP "..tostring(igvars.crBalance).."]", true, "debug")
+    InfCore.Log("Current Balance: "..formatLikeBalance("CRB", igvars.crBalance), true)
 end
+
 function this.BankDepositGMP()
     local totalGMP = this.GetAvailableGMP(true)
 
     --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp()), true, "debug")
 
     local actionableGMP = math.min(math.max(totalGMP,0), math.max(Ivars.crChetRippoBux:Get(),0))
-    
-    InfCore.Log("Deposited To CRB [GMP -"..tostring(actionableGMP).."]", true, "debug")
+
+    InfCore.Log("Deposited To CRB "..formatLikeBalance("GMP", -actionableGMP), true)
     igvars.crBalance = igvars.crBalance + actionableGMP
 
     TppTerminal.UpdateGMP({gmp=-actionableGMP})
 end
+
 function this.BankWithdrawGMP()
     local totalGMP = this.GetAvailableGMP(true)
     local maxWithdraw = this.CONSTS.MAX_LOCAL_GMP - totalGMP
@@ -995,15 +1076,38 @@ function this.BankWithdrawGMP()
 
     --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
     --InfCore.Log("totalGMP="..tostring(totalGMP)..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
-    InfCore.Log("Withdrew From CRB [GMP +"..tostring(actionableGMP).."]", true, "debug")
+    InfCore.Log("Withdrew From CRB " + formatLikeBalance("GMP", actionableGMP), true)
     igvars.crBalance = igvars.crBalance - actionableGMP
 
     TppTerminal.UpdateGMP({gmp=actionableGMP})
 end
 
+function this.BankDonateCRB()
+    local totalCRB = igvars.crBalance
+    local spending = math.max(Ivars.crChetRippoBuxToAbsolition:Get(),0)
+    --local maxWithdraw = this.CONSTS.MAX_LOCAL_GMP - totalCRB
+    --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw), true, "debug")
+
+    local actionableCRB = math.min(math.max(Ivars.crChetRippoBux:Get(),0), math.max(totalCRB,0))
+    local changeInHeroism = math.floor(math.max(actionableCRB/spending, 0))
+
+    TppMotherBaseManagement.AddHeroicPoint({
+        heroicPoint=changeInHeroism
+    })
+    TppMotherBaseManagement.SubOgrePoint({
+        ogrePoint=-changeInHeroism
+    })
+    igvars.crBalance = math.max(igvars.crBalance - actionableCRB, 0)
+
+    --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
+    --InfCore.Log("totalGMP="..tostring(totalGMP)..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
+    InfCore.Log("Donated CRB: "..formatLikeBalance("CRB", -actionableCRB).." "..formatLikeBalance("Heroism", changeInHeroism).." ", true, "debug")
+    --TppTerminal.UpdateGMP({gmp=actionableGMP})
+end
+
 function this.HandleHygieneEvent(hygieneEvent)
     if hygieneEvent == this.CONSTS.HYGIENE_EVENT_SHOWER then
-        igvars.crProvisionalShowerLastUsed = TppScriptVars.GetTotalPlayTime()
+        igvars.crHygieneProvisionalShowerLastUsed = TppScriptVars.GetTotalPlayTime()
         -- we don't need to do anything because they already got showered
     elseif hygieneEvent == this.CONSTS.HYGIENE_EVENT_TOILET then
         this.CleanPlayer()
@@ -1011,19 +1115,20 @@ function this.HandleHygieneEvent(hygieneEvent)
         this.DirtyPlayer()
     end
 end
+
 function this.CleanPlayer() -- cheat
-    if Ivars.crProvisionalShowerEnable:Is(0) then return end
-    local previousUse = igvars.crProvisionalShowerLastUsed or 0
+    if Ivars.crHygieneProvisionalShowerEnable:Is(0) then return end
+    local previousUse = igvars.crHygieneProvisionalShowerLastUsed or 0
 	local currentUse = TppScriptVars.GetTotalPlayTime()
-    local timeBetweenUse = math.max(60*Ivars.crProvisionalShowerWallMinutesBetweenUses:Get(),0)
+    local timeBetweenUse = math.max(60*Ivars.crHygieneProvisionalShowerWallMinutesBetweenUses:Get(),0)
     if (currentUse - previousUse) > timeBetweenUse then
-        igvars.crProvisionalShowerLastUsed = currentUse
+        igvars.crHygieneProvisionalShowerLastUsed = currentUse
         local mostRecentTimeOut = vars.passageSecondsSinceOutMB
         local logText = "Physically and Mentally Refreshed"
         Player.ResetDirtyEffect()
         Player.SetWetEffect()
 
-        local newTimeOut = math.max(0, mostRecentTimeOut - (Ivars.crProvisionalShowerReduceDeployTime:Get()*60*60))
+        local newTimeOut = math.max(0, mostRecentTimeOut - (Ivars.crHygieneProvisionalShowerReduceDeployTime:Get()*60*60))
         vars.passageSecondsSinceOutMB = newTimeOut -- 60*60*24*3 
         if vars.passageSecondsSinceOutMB > 0 then
             logText = "Partially " .. logText
@@ -1035,14 +1140,15 @@ function this.CleanPlayer() -- cheat
         TppUiCommand.AnnounceLogView(logText)
     end
 end
+
 function this.DirtyPlayer()
-    if Ivars.crProvisionalShowerDumpsterEnable:Is(0) then return end
+    if Ivars.crHygieneDumpsterEnable:Is(0) then return end
 
     local mostRecentTimeOut = vars.passageSecondsSinceOutMB
     local logText = "Physically and Mentally Drained"
     Player.SetWetEffect()
 
-    local newTimeOut = math.max(0, mostRecentTimeOut + (Ivars.crProvisionalShowerDumpsterDirtinessIncreaseDeployTime:Get()*60*60))
+    local newTimeOut = math.max(0, mostRecentTimeOut + (Ivars.crHygieneDumpsterDirtinessIncreaseDeployTime:Get()*60*60))
     vars.passageSecondsSinceOutMB = newTimeOut -- 60*60*24*3 
     if vars.passageSecondsSinceOutMB >= (60*60*24*3) then
         logText = "Completely " .. logText
@@ -1052,19 +1158,19 @@ end
 
 
 function this.DemoOverride()
-    if Ivars.crProvisionalShowerReallowQuietShowerCutscene:Get(1) and
+    if Ivars.crHygieneReallowQuietShowerCutscene:Get(1) and
         TppDemo.IsPlayedMBEventDemo("SnakeHasBadSmell_000") then
         TppDemo.ClearPlayedMBEventDemoFlag("SnakeHasBadSmell_000")
     end
 end
 
-function this.CrProvisionalShowerSniffCheck()
+function this.CrHygieneSniffCheck()
     local daysUnbathed = (vars.passageSecondsSinceOutMB/60/60/24)
-    local unstinkAmount = Ivars.crProvisionalShowerReduceDeployTime:Get()*60*60
+    local unstinkAmount = Ivars.crHygieneProvisionalShowerReduceDeployTime:Get()*60*60
 
-    local previousUse = igvars.crProvisionalShowerLastUsed or 0
+    local previousUse = igvars.crHygieneProvisionalShowerLastUsed or 0
 	local currentUse = TppScriptVars.GetTotalPlayTime()
-    local timeBetweenUse = math.max(60*Ivars.crProvisionalShowerWallMinutesBetweenUses:Get(),0)
+    local timeBetweenUse = math.max(60*Ivars.crHygieneProvisionalShowerWallMinutesBetweenUses:Get(),0)
     local canBathe = (currentUse - previousUse) > timeBetweenUse
 
     local stinky = Player.GetSmallFlyLevel() >= 1
@@ -1092,7 +1198,7 @@ function this.OnFadeInForShower()
 end
 
 function this.OnFadeInForGMPLoss()
-    InfCore.Log("Death Fade In: "..tostring(Ivars.crDeathGmpLossEnable:Is(1)), true, "debug")
+    --InfCore.Log("Death Fade In: "..tostring(Ivars.crDeathGmpLossEnable:Is(1)), true, "debug")
     if Ivars.crDeathGmpLossEnable:Is(0) then return end
     local totalGMP = this.GetAvailableGMP(not Ivars.crDeathGmpLossIncludeGlobal:Is(1))
 
@@ -1103,29 +1209,63 @@ function this.OnFadeInForGMPLoss()
             TppTerminal.UpdateGMP({gmp=-cost})
             TppUiCommand.AnnounceLogView("Resuscitation Supplies: [GMP -" .. tostring(cost) .. "]")
         end
-		--TppMission.UpdateCheckPointAtCurrentPosition()
+		TppMission.UpdateCheckPointAtCurrentPosition()
 	end
 	this.vars.crDeathGmpLossValidDeath = false
 end
 
 function this.OnFulton(gameObjectId, gimmckInstance, gimmckDataSet, staffID)
-    if Ivars.crInfinityFultons:Is(1) and svars.FulltonCount ~= nil then
-        svars.FulltonCount = svars.FulltonCount + 1 
+    if false and Ivars.crInfinityFultons:Is(1) and svars.FulltonCount ~= nil then
+        svars.FulltonCount = svars.FulltonCount + 1
     end
     -- svars.trm_missionFultonCount
     --TppMotherBaseManagement.DirectAddStaff{ staffId=staffID, section = "Develop" }
 end
 
 function this.OnDeath(playerId,deathTypeStr32)
-    InfCore.Log("[dead] playerId="..tostring(playerId)..",deathType="..deathTypeStr32, true, "debug")
+    --InfCore.Log("[dead] playerId="..tostring(playerId)..",deathType="..deathTypeStr32, true, "debug")
     if Ivars.crDeathGmpLossEnable:Is(0) then return end
 	if (deathTypeStr32~=InfCore.StrCode32("FallDeath")) and 
 		(deathTypeStr32~=InfCore.StrCode32("Suicide")) and 
 		(not TppMission.IsFOBMission(vars.missionCode)) then
-            InfCore.Log("[dead] was valid", true, "debug")
+        --InfCore.Log("[dead] was valid", true, "debug")
 		this.vars.crDeathGmpLossValidDeath = true
-    else
-        InfCore.Log("[dead] was not valid", true, "debug")
+    --else
+        --InfCore.Log("[dead] was not valid", true, "debug")
+    end
+end
+
+function this.Zombify(gameId,opts)
+    local options = InfUtil.MergeTable({
+        disableDamage=false,
+        isHalf=false,
+        isMsf=false,
+        life=300,
+        stamina=200,
+        --
+        ignoreFlag=0,
+        isHagure=true,
+        isZombieSkin=true,
+        useZombieRoute=false,
+    }, opts or {})
+    local damagedType = GameObject.GetTypeIndex(gameId)
+    if damagedType == TppGameObject.GAME_OBJECT_TYPE_SOLDIER2 then
+        GameObject.SendCommand(gameId,{id="SetZombie",enabled=true,isHalf=options.isHalf,isZombieSkin=options.isZombieSkin,isHagure=options.isHagure,isMsf=options.isMsf})
+        GameObject.SendCommand(gameId,{id="SetMaxLife",life=options.life,stamina=options.stamina})
+        GameObject.SendCommand(gameId,{id="SetZombieUseRoute",enabled=options.useZombieRoute})
+        if options.disableDamage then
+            GameObject.SendCommand(gameId,{id="SetDisableDamage",life=false,faint=true,sleep=true})
+        end
+        if options.isHalf then
+            GameObject.SendCommand(gameId,{id="SetIgnoreDamageAction",flag=options.ignoreFlag})
+        end
+    end
+end
+
+function this.ZombifyWithBait(damagedId, attackId, attackerId)
+    if Ivars.crCombatBaitZombifiesSoldiers:Is(0) then return end
+    if attackId == TppDamage.ATK_KibidangoHit then
+        this.Zombify(damagedId)
     end
 end
 
@@ -1149,122 +1289,195 @@ function this.Update()
     --InfCore.Log("oy")
 end
 
-function this.Rebuild()
-    this.registerIvars={}
-    this.registerMenus={}
-    this.langStrings={
-        eng={},
-        help={
-            eng={},
-        },
-    }
-    --this.GenerateIvars(nil, nil, this.ultraVars)
-    for var, value in pairs(this.ultraVars) do
-        this.GenerateIvars(nil, var, value)
-    end
-    -- InfCore.PrintInspect(this, {varName="ChetRippo"})
-    -- @TODO: rebuild all lookups in here
-end
 function this.EmergencySuppressorBuyNow()
     this.GiveSuppressor()
 end
+
+function this.LocatePlayer()
+    local outPos = TppPlayer.GetPosition()
+    outPos = Vector3(outPos[1],outPos[2],outPos[3])
+    return outPos
+end
+
+function this.LocateObject(gameId,fallBackToPlayer)
+    local outPos=GameObject.SendCommand(gameId,{id="GetPosition"})
+    if not outPos then
+        if fallBackToPlayer then
+            outPos = TppPlayer.GetPosition()
+            outPos = Vector3(outPos[1],outPos[2],outPos[3])
+        else
+            InfCore.Log("WARNING: ChetRippo.LocateObject: GetPosition nil for gameId:"..tostring(gameId)..", no player fallback")
+        end
+    else
+        outPos=Vector3(outPos:GetX(),outPos:GetY(),outPos:GetZ())
+    end
+    return outPos
+end
+
+function this.RandomVector3(extent)
+    return Vector3(
+        math.random(-extent, extent),
+        math.random(-extent, extent),
+        math.random(-extent, extent)
+    )
+end
+
+function this.FindEquipNameFromEquipId(equipId)
+
+end
+
+--TppEquip.GetSupportWeaponTypeId()
+-- SWP_TYPE_
+-- SWP_TYPE_Grenade 
+-- SWP_TYPE_SmokeGrenade 
+-- Player.GetItemLevel( TppEquip.EQP_IT_Fulton_Child ) 
+-- TppMotherBaseManagement.IsEquipDeveloped
+
+-- 1) take a weapon's name, reduce it to type
+-- 2) find the highest grade the player has
+function this.GetPlayerGradeForEquip(equipName)
+    local inputEquipId = TppEquip[equipName]
+    if inputEquipId == nil then return nil end -- NOT FOUND
+
+    local swt = TppEquip.GetSupportWeaponTypeId( inputEquipId )
+    local matchIndex = -1
+    for i=0,7 do
+        local gswt = TppEquip.GetSupportWeaponTypeId( vars.supportWeapons[i] )
+        if swt == gswt then
+            matchIndex = i
+            break
+        end
+    end
+
+    if matchIndex > -1 then
+        -- the player has the weapon
+        local matchingEquipId = vars.supportWeapons[matchIndex]
+        local matchingEquipName = InfLookup.TppEquip.equipId[ matchingEquipId ]
+        if matchingEquipName then
+            InfCore.Log("peepee: found it " .. matchingEquipName, true, "debug")
+            return matchingEquipName
+        end
+    else
+        -- the player does not have the weapon
+        -- we're going to do very drastic things now
+        local base = this.GetBaseItemNameFromGraded(equipName)
+    end
+end
+
+
+function this.GetBaseItemNameFromGraded(equipName)
+    local outName = string.match(equipName, "(.+)_G%d%d$")
+    if outName ~= nil then
+        return outName
+    else
+        return equipName
+    end
+end
+
+function this.SpawnObject(itemInput, extraData)
+    local itemDef = InfUtil.MergeTable({
+        number          = 1,
+        rotation        = Quat.RotationY(0),
+        linearVelocity  = this.RandomVector3(extraData.randomLinearVelocity or 0),
+        angularVelocity = this.RandomVector3(extraData.randomAngularVelocity or 0),
+    }, itemInput)
+    local item = TppPickable.DropItem(itemDef)
+    TppSoundDaemon.PostEvent("sfx_s_item_appear")
+    return item
+end
+
 function this.GiveSuppressor()
     local cost = Ivars.crEmergencySuppliesSuppressorsCost:Get()
     if Ivars.crEmergencySuppliesSuppressorsEnable:Is(0) or this.GetAvailableGMP(true) < cost then return end
-    local equipName = "EQP_AB_Suppressor"--=categoryTable[math.random(#categoryTable)]
-    local equipId=TppEquip[equipName]
 
-    local linearMax=0.1
-    local angularMax=4
-    local dropOffsetY=1.2
-    local number = 1
+    local linearMax=0
+    local angularMax=0
+    local dropOffsetY=0.5
 
-    -- tax fraud scam please ignore
-    --[[
-    local newBird = GameObject.CreateGameObjectId("TppCritterBird", 42069)
-    GameObject.SendCommand(newBird,{id="SetEnabled",enabled=true})
-    GameObject.SendCommand(newBird,{id="SetPosition",position=TppPlayer.GetPosition(),rotY=0})
-    GameObject.SendCommand(newBird,{id="SetResourceType",type=TppCollection.TYPE_DIAMOND_LARGE})
-    ]]
-
-    local dropPosition=TppPlayer.GetPosition()
-    if not dropPosition then
-        InfCore.Log("[WAR] WARNING: ChetRippo.GiveSuppressor: GetPosition nil for desperate attempt :(((")
-    end
+    local dropPosition = this.LocatePlayer()
     if dropPosition then
-        dropPosition=Vector3(dropPosition[1],dropPosition[2]+dropOffsetY,dropPosition[3])
-        local thing = TppPickable.DropItem({
-            equipId=equipId,
-            number=number,
-            position=dropPosition,
-            rotation=Quat.RotationY(0),
-            linearVelocity=Vector3(math.random(-linearMax,linearMax),math.random(-linearMax,linearMax),math.random(-linearMax,linearMax)),
-            angularVelocity=Vector3(math.random(-angularMax,angularMax),math.random(-angularMax,angularMax),math.random(-angularMax,angularMax)),
+        local item = this.SpawnObject({
+            equipId  = TppEquip.EQP_AB_Suppressor,
+            position = Vector3.Add(dropPosition,Vector3(0, dropOffsetY, 0)),
+        }, {
+            randomLinearVelocity = linearMax,
+            randomAngularVelocity = angularMax,
         })
-        TppSoundDaemon.PostEvent("sfx_s_item_appear")
-        InfCore.Log("[Support]: Emergency Suppressor Deployed [GMP -"..tostring(cost).."]", true, "debug")
-        TppTerminal.UpdateGMP({gmp=-cost})
 
-        -- tax fraud scam plese ignore
-        --[[
-        GameObject.SendCommand(thing,{id="SetEnabled",enabled=true})
-        GameObject.SendCommand(thing,{id="SetPosition",position=TppPlayer.GetPosition(),rotY=0})
-        GameObject.SendCommand(thing,{id="SetResourceType",type=TppCollection.TYPE_DIAMOND_LARGE})
-        ]]
+        InfCore.Log("Emergency Suppressor Deployed: [GMP -"..tostring(cost).."]", true, "debug")
+        TppTerminal.UpdateGMP({gmp=-cost})
+        return item
     end
 end
 
-function this.Messages()
-    local dinko = Tpp.StrCode32Table({
-        --[[
-        Radio={
-            {msg="EspionageRadioCandidate",func=this.OnScanRadioTarget}
-        },
-        Marker={
-            {msg="ChangeToEnable",func=this.RadioOverride}
-        },
-        GameObject={
-            {msg="Damage",func=this.HurtBird}
-        },
-        ]]
-        GameObject={
-            {msg="Fulton",func=this.OnFulton},
-        },
-        Player={
-            {msg="Dead",func=this.OnDeath, option={isExecGameOver=true}},
+function this.BirdGotHurt(damagedId, attackId, attackerId)
+    if Ivars.crCombatBirdsDropItems:Is(0) then return end
+    local damagedType = GameObject.GetTypeIndex(damagedId)
+    if damagedType ~= TppGameObject.GAME_OBJECT_TYPE_CRITTER_BIRD then return end
 
-            -- [[ == PROVISIONAL SHOWERS == ]]
-            {msg="PlayerShowerEnd",func=function(...)
-                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_SHOWER, ...)
-            end,},
-            {msg="OnPlayerToilet",func=function(...)
-                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_TOILET, ...)
-            end,},
-            {msg="OnPlayerTrashBox",func=function(...)
-                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_DUMPSTER, ...)
-            end,},
+    -- TODO: build dropPool from EQP_TYPE_Throwing matches
+    local dropPool = {
+        "EQP_SWP_Grenade",
+        "EQP_SWP_StunGrenade",
+        "EQP_SWP_SmokeGrenade",
+    }
+    local objectToDrop = dropPool[math.random(#dropPool)]
+    local thingo = this.GetPlayerGradeForEquip(objectToDrop)
+    
+    if thingo ~= nil and TppEquip[thingo] then
+        objectToDrop = TppEquip[thingo]
+    else
+        objectToDrop = TppEquip[objectToDrop]
+    end
 
-            {msg="SuppressorIsBroken",func=this.GiveSuppressor},
-        },
-        UI = {
-            {msg="EndFadeIn",sender="FadeInOnStartMissionGame",func=function(...)
-                this.OnFadeInForGMPLoss(...)
-                this.OnFadeInForShower(...)
-            end,},
-            {msg="EndFadeIn",sender="FadeInOnGameStart",func=function(...)
-                this.OnFadeInForGMPLoss(...)
-                this.OnFadeInForShower(...)
-            end,},
+    local linearMax=0
+    local angularMax=0
+    local dropOffsetY=0.5
 
-            {msg="EndFadeOut",sender="OnEstablishMissionClearFadeOut",func=this.DemoOverride},
-        },
-    })
-    -- InfCore.PrintInspect(dinko, {varName="dinko"})
-    return dinko
+    local dropPosition = this.LocateObject(damagedId, true)
+    if dropPosition then
+        local item = this.SpawnObject({
+            equipId  = objectToDrop,
+            position = Vector3.Add(dropPosition,Vector3(0, dropOffsetY, 0)),
+        }, {
+            randomLinearVelocity = linearMax,
+            randomAngularVelocity = angularMax,
+        })
+
+        InfCore.Log("Bird Dropped Item!", true)
+        --InfCore.Log("Emergency Suppressor Deployed: [GMP -"..tostring(cost).."]", true, "debug")
+        return item
+    end
 end
 
-function this.OnMessage(sender, messageId, arg0, arg1, arg2, arg3, strLogText)
-    Tpp.DoMessage(this.messageExecTable, TppMission.CheckMessageOption, sender, messageId, arg0, arg1, arg2, arg3, strLogText)
+-- [[ == WRAPPING MODULES == ]]
+-- stuff that we don't want to force into IH
+
+function this.CaptureRegisterResourceParam(resource_params)
+    if resource_params.resource ~= nil then
+        if this.vars.interceptedResourceParam[resource_params.resource] == nil then
+            this.vars.interceptedResourceParam[resource_params.resource] = resource_params
+            this.vars.livingResourceParam[resource_params.resource] = clone(resource_params)
+
+            -- if we're editing do it here:
+
+            -- survey for the time ranges to create a baseline scale range
+            --[[
+            if mission_param.timeMinute > this.vars.timeMinuteMax then
+                this.vars.timeMinuteMax = mission_param.timeMinute
+            end
+            if mission_param.timeMinute < this.vars.timeMinuteMin then
+                this.vars.timeMinuteMin = mission_param.timeMinute
+            end
+            if mission_param.timeMinuteRandom > this.vars.timeMinuteRandomMax then
+                this.vars.timeMinuteRandomMax = mission_param.timeMinuteRandom
+            end
+            if mission_param.timeMinuteRandom < this.vars.timeMinuteRandomMin then
+                this.vars.timeMinuteRandomMin = mission_param.timeMinuteRandom
+            end
+            ]]
+        end
+    end
 end
 
 function this.CaptureRegisterDeployBasicParam(basic_params)
@@ -1314,70 +1527,101 @@ function this.WrapIsUsedRankLimitedItem(...)
     -- else: buzz off
 end
 
---[[
-function this.ExploreWrap(...)
-    local data = {...}
-    local mission_param = data[1]
-    
-    InfCore.Log("#explorewrap: found DeployMissionParam:", true, "debug")
-    InfCore.PrintInspect(...)
-    if mission_param.deployMissionId ~= nil then
-        mission_param.latitude = 27.87
-        mission_param.longitude = -82.74
-        -- mission_param.deadRate = 100
-        this.vars.interceptedDeployMissionParams[mission_param.deployMissionId] = mission_param
-        this.vars.livingDeployMissionParams[mission_param.deployMissionId] = clone(mission_param)
-    else
-        InfCore.Log("#explorewrap: this next param is fucked up:", true, "debug")
-        InfCore.PrintInspect(...)
+
+local function GenerateWrapper(path,wrapFunc)
+    local tree = InfUtil.Split(path, ".")
+    local root = this.wrap
+    local wrappingPath = _G
+    local stop =  tree[#tree]
+    for _, v in ipairs(tree) do
+        if v ~= stop then
+            if root[v] == nil then
+                root[v] = {}
+            end
+            root = root[v]
+            wrappingPath = wrappingPath[v]
+        end
     end
 
-    this.wrap.TppMotherBaseManagement__RegisterDeployMissionParam(this.vars.livingDeployMissionParams[mission_param.deployMissionId])
-end
-]]
-if this.wrap.TppMotherBaseManagement__RegisterDeployBasicParam == nil then
-    InfCore.Log("#*#*#*# GODZILLA MOMENT -- wrapping RegisterDeployBasicParam the first time", true, "debug")
-    this.wrap.TppMotherBaseManagement__RegisterDeployBasicParam = TppMotherBaseManagement.RegisterDeployBasicParam
-    TppMotherBaseManagement.RegisterDeployBasicParam = this.CaptureRegisterDeployBasicParam
-else
-    InfCore.Log("#*#*#*# GODZILLA MOMENT -- wrapping RegisterDeployBasicParam a second time!!!", true, "debug")
-end
-if this.wrap.TppMotherBaseManagement__RegisterDeployMissionParam == nil then
-    InfCore.Log("#*#*#*# GAMERA MOMENT -- wrapping RegisterDeployMissionParam the first time", true, "debug")
-    this.wrap.TppMotherBaseManagement__RegisterDeployMissionParam = TppMotherBaseManagement.RegisterDeployMissionParam
-    TppMotherBaseManagement.RegisterDeployMissionParam = this.CaptureRegisterDeployMissionParam
-else
-    InfCore.Log("#*#*#*# GAMERA MOMENT -- wrapping RegisterDeployMissionParam a second time!!!", true, "debug")
-end
-if this.wrap.TppTerminal__AddVolunteerStaffs == nil then
-    this.wrap.TppTerminal__AddVolunteerStaffs = TppTerminal.AddVolunteerStaffs
-    TppTerminal.AddVolunteerStaffs = this.WrapAddVolunteerStaffs
-else
-    InfCore.Log("#*#*#*# GAMERA MOMENT -- wrapping this.WrapAddVolunteerStaff a second time!!!", true, "debug")
-end
-if this.wrap.TppResult__IsUsedRankLimitedItem == nil then
-    this.wrap.TppResult__IsUsedRankLimitedItem = TppResult.IsUsedRankLimitedItem
-    TppResult.IsUsedRankLimitedItem = this.WrapIsUsedRankLimitedItem
-else
-    InfCore.Log("#*#*#*# GAMERA MOMENT -- wrapping this.WrapIsUsedRankLimitedItem a second time!!!", true, "debug")
+    if root[stop] == nil then
+        root[stop] = wrappingPath[stop]
+        wrappingPath[stop] = wrapFunc
+    else
+        InfCore.Log("#*#*#*# GAMERA MOMENT -- wrapping [" .. path .. "] a second time!!!", true, "debug")
+    end
 end
 
---[[
-function this.ExploreWrap2(...)
-    local data = {...}
-    InfCore.Log("#explorewrap: found RegisterDeployBasicParam:", true, "debug")
-    InfCore.PrintInspect(...)
+GenerateWrapper("TppMotherBaseManagement.RegisterResourceParam", this.CaptureRegisterResourceParam)
+GenerateWrapper("TppMotherBaseManagement.RegisterDeployBasicParam", this.CaptureRegisterDeployBasicParam)
+GenerateWrapper("TppMotherBaseManagement.RegisterDeployMissionParam", this.CaptureRegisterDeployMissionParam)
+GenerateWrapper("TppTerminal.AddVolunteerStaffs", this.WrapAddVolunteerStaffs)
+GenerateWrapper("TppResult.IsUsedRankLimitedItem", this.WrapIsUsedRankLimitedItem)
+-- TESTING BELOW:
 
-    this.wrap.TppMotherBaseManagement__RegisterDeployBasicParam(unpack(data))
+--[[ == IH/IHHOOK STUFF HERE == ]]
+
+function this.Messages()
+    local dinko = Tpp.StrCode32Table({
+        --[[
+        Radio={
+            {msg="EspionageRadioCandidate",func=this.OnScanRadioTarget}
+        },
+        Marker={
+            {msg="ChangeToEnable",func=this.RadioOverride}
+        },
+        GameObject={
+            {msg="Fulton",func=this.OnFulton},
+        },
+        ]]
+        GameObject={
+            {msg="Damage",func=function(...)
+                this.ZombifyWithBait(...)
+                this.BirdGotHurt(...)
+            end,}
+        },
+        Player={
+            {msg="Dead",func=this.OnDeath, option={isExecGameOver=true}},
+
+            -- [[ == PROVISIONAL SHOWERS == ]]
+            {msg="PlayerShowerEnd",func=function(...)
+                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_SHOWER, ...)
+            end,},
+            {msg="OnPlayerToilet",func=function(...)
+                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_TOILET, ...)
+            end,},
+            {msg="OnPlayerTrashBox",func=function(...)
+                this.HandleHygieneEvent(this.CONSTS.HYGIENE_EVENT_DUMPSTER, ...)
+            end,},
+
+            {msg="SuppressorIsBroken",func=this.GiveSuppressor},
+        },
+        Throwing = {
+            {msg="NotifyStartWarningFlare",func=function(x,y,z)
+                local offSetUp=1.5
+
+                TppPlayer.Warp{pos={x,y+offSetUp,z},rotY=vars.playerCameraRotation[1]}
+            end,}
+        },
+        UI = {
+            {msg="EndFadeIn",sender="FadeInOnStartMissionGame",func=function(...)
+                this.OnFadeInForGMPLoss(...)
+                this.OnFadeInForShower(...)
+            end,},
+            {msg="EndFadeIn",sender="FadeInOnGameStart",func=function(...)
+                this.OnFadeInForGMPLoss(...)
+                this.OnFadeInForShower(...)
+            end,},
+
+            {msg="EndFadeOut",sender="OnEstablishMissionClearFadeOut",func=this.DemoOverride},
+        },
+    })
+    -- InfCore.PrintInspect(dinko, {varName="dinko"})
+    return dinko
 end
-if this.wrap.TppMotherBaseManagement__RegisterDeployBasicParam == nil then
-    this.wrap.TppMotherBaseManagement__RegisterDeployBasicParam = TppMotherBaseManagement.RegisterDeployBasicParam
-    TppMotherBaseManagement.RegisterDeployBasicParam = this.ExploreWrap2
+
+function this.OnMessage(sender, messageId, ...)
+    Tpp.DoMessage(this.messageExecTable, TppMission.CheckMessageOption, sender, messageId, ...)
 end
-]]
-
-
-
 
 function this.Init(missionTable)
   --this.Rebuild()
@@ -1390,6 +1634,22 @@ end
 
 this.OnReload = this.Init
 -- we have to do this part as early as possible for ivar related reasons
+function this.Rebuild()
+    this.registerIvars={}
+    this.registerMenus={}
+    this.langStrings={
+        eng={},
+        help={
+            eng={},
+        },
+    }
+    --this.GenerateIvars(nil, nil, this.ultraVars)
+    for var, value in pairs(this.ultraVars) do
+        this.GenerateIvars(nil, var, value)
+    end
+    -- InfCore.PrintInspect(this, {varName="ChetRippo"})
+    -- @TODO: rebuild all lookups in here
+end
 this.Rebuild()
 
 return this
