@@ -1,4 +1,6 @@
 {
+    "steam_userdata_path": "C:\\Program Files (x86)\\Steam\\userdata\\39200437\\",
+    "save_backup_path": "C:\\projects\\mgsv\\save_backup\\",
     "makebite_path": "C:\\projects\\mgsv\\utils\\snakebite\\makebite.exe",
     "mgsvtpp_path": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\MGS_TPP\\",
     "sevenzip_path": "C:\\ProgramData\\chocolatey\\bin\\7z.exe",
