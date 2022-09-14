@@ -26,7 +26,7 @@ InfUtil.MergeTable = function(t1, t2)
 end
 
 local this = {
-    debugModule = true,
+    debugModule = false,
 }
 
 this.CONSTS = {
@@ -91,615 +91,654 @@ this.ultraVars = {
         description = "Chet Rippo menu",
         help = "A collection of funny little things.",
         children = {
-            {name = "crBankMenu",
+            {name = "crSettingsMenu",
                 type = "menu",
                 setting = {},
-                description = "Chet Rippo Bank menu",
-                help = "A sub-menu for financial related settings.",
+                description = "Chet Rippo Settings / Config menu",
+                help = "All configuration options for Chet Rippo's features.",
                 children = {
-                    {
-                        name = "crChetRippoBux",
+                    {name = "crVanillaOverridesMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Vanilla Overrides menu",
+                        help = "A sub-menu for tweaking tables the game ships with WITHOUT overriding IH files.",
+                        children = {
+                            {name = "crVODeployBasicParamMenu",
+                                type = "menu",
+                                setting = {},
+                                description = "Deploy Basic Params menu",
+                                help = "These settings affect configuration settings for how all (local) deployments are handled.\nSome changes can be real-time, for the others you may need to:\n1) wait for the refresh period\n2) change levels / return to Mother Base\n3) restart the game\n4) all of the above (in order)",
+                                children = {
+                                    {name = "crVODeployBasicParamsEnable",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "Override Deploy Basic Params Enable",
+                                        help = "Do you want to tweak base deployment settings?",
+                                    },
+                                    {name = "crDeployBasicParamVOmissionListRefreshTimeMinute",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=12,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "missionListRefreshTimeMinute",
+                                        help = "The time it takes for the deployment list to re-roll a new set of deployments.",
+                                    },
+                                    {name = "crDeployBasicParamVOdrawCountPerSr",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=10,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "drawCountPerSr",
+                                        help = "??? This value's purpose is not yet known.\nIt its believed to affect draw attempts for staff or resources of the Super Rare grade.",
+                                    },
+                                    {name = "crDeployBasicParamVOdrawCountPerR",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=4,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "drawCountPerR",
+                                        help = "??? This value's purpose is not yet known.\nIt its believed to affect draw attempts for staff or resources of the Rare grade.",
+                                    },
+                                    {name = "crDeployBasicParamVOpowerTransitVehicle",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=200,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "powerTransitVehicle",
+                                        help = "The additional flat Fighting Ability granted by an unarmed transport vehicle.",
+                                    },
+                                    {name = "crDeployBasicParamVOpowerBattleVehicle",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=800,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "powerBattleVehicle",
+                                        help = "The additional flat Fighting Ability granted by an armed vehicle.",
+                                    },
+                                    {name = "crDeployBasicParamVOpowerWalkerGear",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=1200,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "powerWalkerGear",
+                                        help = "The additional flat Fighting Ability granted by a Walker Gear.",
+                                    },
+                                    {name = "crDeployBasicParamVOpowerBattleGear",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=3500,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "powerBattleGear",
+                                        help = "The additional Fighting Ability granted by the Battle Gear.",
+                                    },
+                                    {name = "crDeployBasicParamVOminusWinRateTransitVehicle",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=5,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "minusWinRateTransitVehicle",
+                                        help = "The percentage deducted from your win rate by the presence of an opposing unarmed transit vehicle.",
+                                    },
+                                    {name = "crDeployBasicParamVOminusWinRateBattleVehicle",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=10,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "minusWinRateBattleVehicle",
+                                        help = "The percentage deducted from your win rate by the presence of an opposing armed vehicle.",
+                                    },
+                                    {name = "crDeployBasicParamVOminusWinRateWalkerGear",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=15,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "minusWinRateWalkerGear",
+                                        help = "The percentage deducted from your win rate by the presence of an opposing Walker Gear.",
+                                    },
+                                    {name = "crDeployBasicParamVOminusWinRateBattleGear",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=50,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "minusWinRateBattleGear",
+                                        help = "The percentage deducted from your win rate by the presence of an opposing Battle Gear.",
+                                    },
+                                    {name = "crDeployBasicParamVOwinRateMin",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=5,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "winRateMin",
+                                        help = "The lowest possible percentage your win rate can ever be. Set to 0 to always have a chance to fail horribly.",
+                                    },
+                                    {name = "crDeployBasicParamVOwinRateMax",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=95,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "winRateMax",
+                                        help = "The highest possible percentage your win rate can ever be.\nSet to 0 along with the MIN to never win.\nSet to 100 to always have a chance for a guaranteed victory.\nSet to 100 along with the MIN to win every time.",
+                                    },
+                                    {name = "crDeployBasicParamVOdeadRateMin",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=3,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "deadRateMin",
+                                        help = "The fewest percentage of losses from all deployed soldiers and assets you will suffer.\nA 3% means if you deploy 100 men you will be guaranteed to lose at least 3 of them, if not more.",
+                                    },
+                                    {name = "crDeployBasicParamVOdeadRateMax",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=50,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "deadRateMax",
+                                        help = "The highest percentage of losses from all deployed soldiers and assets you will suffer.\nA 50% means if you deploy 100 men you will be guaranteed to lose 50 of them at worst.\nSet to 0 along with MIN to never suffer losses.",
+                                    },
+                                    {name = "crDeployBasicParamVOdeadRateUpDownCorrection",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=1,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "deadRateUpDownCorrection",
+                                        help = "??? This value's purpose is not yet known.\nIt is believed to affect rounding for the computed Dead Rate.",
+                                    },
+                                    {name = "crDeployBasicParamVOteamStaffCountMin",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=5,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "teamStaffCountMin",
+                                        help = "??? This value's purpose is not yet known.\nIt is believed to affect the fewest members in a grade designation required to form a deploy team.",
+                                    },
+                                },
+                            },
+                            {name = "crVODeployMissionParamsMenu",
+                                type = "menu",
+                                setting = {},
+                                description = "Deploy Mission Params menu",
+                                help = "These settings are for tweaking each individual deployment automatically.\nI would love to make a menu per-deployment but that is really complicated.\nSome changes can be real-time, for the others you may need to:\n1) wait for the refresh period\n2) change levels / return to Mother Base\n3) restart the game\n4) all of the above (in order)",
+                                children = {
+                                    {name = "crVODeployMissionParamsEnable",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "Override Deploy Mission Params Enable",
+                                        help = "Do you want to tweak all deployments?",
+                                    },
+                                    {name = "crDeployMissionParamsVOtimeMinuteMin",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=10,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "timeMinuteMin",
+                                        help = "The lower bound of a deployment's duration, rescaled from their original duraiton, not including random offsets.\nSetting this to zero will not make the deploy time zero unless the Max is also zero.",
+                                    },
+                                    {name = "crDeployMissionParamsVOtimeMinuteMax",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=120,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "timeMinuteMax",
+                                        help = "The upper bound of a deployment's duration, rescaled from their original duraiton, not including random offsets.\nSetting this to zero will not make the deploy time zero unless the Min is also zero.",
+                                    },
+                                    {name = "crDeployMissionParamsVOtimeMinuteRandomMin",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=5,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "timeMinuteRandomMin",
+                                        help = "The lower bound of random time to get added to each deployment time, when they are rolled.",
+                                    },
+                                    {name = "crDeployMissionParamsVOtimeMinuteRandomMax",
+                                        type="ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=60,
+                                            OnChange=this.RecomputeDeployTweaks,
+                                        },
+                                        description = "timeMinuteRandomMax",
+                                        help = "The upper bound of random time to get added to each deployment time, when they are rolled.",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                    {name = "crBankMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Chet Rippo Bank menu",
+                        help = "A sub-menu for financial related settings.",
+                        children = {
+                            {name = "crChetRippoBuxToAbsolition",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.EXTERNAL,
+                                    default=1000,
+                                    range=this.infiniteRange,
+                                },
+                                description = "CRB To Absolition",
+                                help = "How many CRB you can donate for repentence.",
+                            },
+                        },
+                    },
+                    {name = "crEmergencySuppliesMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Emergency Supplies menu",
+                        help = "A sub-menu for emergency supply related settings.",
+                        children = {
+                            {name = "crEmergencySuppliesSuppressorsEnable",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Enable Emergency Suppressors",
+                                help = "A suppressor will be made available every time one of yours breaks, if you can afford it.",
+                            },
+                            {name = "crEmergencySuppliesSuppressorsCost",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.EXTERNAL,
+                                    default=2000,
+                                    range=this.infiniteRange,
+                                },
+                                description = "Emergency Suppressor Cost",
+                                help = "How much GMP to spend when utilizing an emergency suppressor.",
+                            },
+                        },
+                    },
+                    {name = "crDGMPLossMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Death GMP Loss menu",
+                        help = "A sub-menu for death related settings.",
+                        children = {
+                            {name = "crDeathGmpLossEnable",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "GMP Death Loss",
+                                help = "Do you want to lose GMP when you die?",
+                            },
+                            {name = "crDeathGmpLossIncludeGlobal",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Include Global GMP",
+                                help = "Do you want your Global GMP to count toward your percentage value?",
+                            },
+                            {name = "crDeathGmpLossPercentage",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.EXTERNAL,
+                                    default=25,
+                                    range={max=100,min=0,increment=1},
+                                    isPercent=true,
+                                },
+                                description = "Death GMP Loss %",
+                                help = "How much GMP to lose on death, as a percentage.",
+                            },
+                        },
+                    },
+                    {name = "crHygieneMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Hygiene menu",
+                        help = "A sub-menu for toilet and shower related settings.",
+                        children = {
+                            {name = "crHygieneProvisionalShowerEnable",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Toilets Are Showers",
+                                help = "Do you want to get clean when you're on the john?",
+                            },
+                            {name = "crHygieneProvisionalShowerReduceDeployTime",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.EXTERNAL,
+                                    default=24,
+                                    range={max=72,min=0,increment=1},
+                                    noBounds=true,
+                                },
+                                description = "Deployment Reduction Time",
+                                help = "How much each shower reduces your time deployed (in in-game hours).",
+                            },
+                            -- TODO: set a minimum for how low deployment can be reduced to via showering
+                            -- provisional shower balanced profile is: 259200 
+                            {name = "crHygieneProvisionalShowerWallMinutesBetweenUses",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.EXTERNAL,
+                                    default=5,
+                                    range={max=60,min=0,increment=1},
+                                    noBounds=true,
+                                },
+                                description = "Wall Minutes Between Uses",
+                                help = "How many minutes (irl, regardless of time scale) between uses of a toilet as a provisional shower.",
+                            },
+                            {name = "crHygieneDumpsterEnable",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Dumpsters Make You Stinky",
+                                help = "Do you want to get dirty, and keep Ocelot away from you?",
+                            },
+                            {name = "crHygieneDumpsterDirtinessIncreaseDeployTime",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.EXTERNAL,
+                                    default=4,
+                                    range={max=72,min=0,increment=1},
+                                    noBounds=true,
+                                },
+                                description = "Dumpster Dirtiness Increase Time",
+                                help = "How much stinkier you get for jumping into a dumpster (in in-game hours).",
+                            },
+                            {name = "crHygieneReallowQuietShowerCutscene",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Reallow Quiet Cutscene",
+                                help = "Forcibly toggle the flag to replay the cutscene with Quiet in Mother Base by disabling the flag for having seen it, every time it is active.",
+                            },
+                        },
+                    },
+                    {name = "crTimeMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Time menu",
+                        help = "A sub-menu for financial related settings.",
+                        children = {
+                            {name = "crMiscSyncLocalTime",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Time: Sync Local Time",
+                                help = "If you want the timescale to match your computer's time.\nYou should set timescale=1 in IH to prevent any strange behavior.\nMay make some cutscenes look weird, plese report any problems.",
+                            },
+                            {name = "crMiscSyncLocalTimeOffset",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range={min=-23,max=23,increment=1},
+                                    default=0,
+                                },
+                                description = "Time: Local Time Hour Offset",
+                                help = "If the game is too bright based on local time, offset it forward or backwards.\nAlso changes the resultant in-game time, not just light levels.",
+                            },
+                        },
+                    },
+                    {name = "crCombatMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Combat menu",
+                        help = "A sub-menu combat related settings.\nThese should not be run on FOB missions.",
+                        children = {
+                            {name = "crCombatSupportHeliFlareWarps",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Combat: Support Heli Flare Warps",
+                                help = "Allow you to teleport to the location a Support Heli flare deploys.\nSupport Heli will still appear.\nWatch out for the smoke!",
+                            },
+                            {name = "crCombatBaitZombifiesSoldiers",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Combat: Bait Zombifies Soldiers",
+                                help = "A direct hit with bait will cause soldiers to become zombified.",
+                            },
+                        },
+                    },
+                    {name = "crMiscMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Miscellenous menu",
+                        help = "A sub-menu for settings I couldn't categorize.",
+                        children = {
+                            -- {min=-math.huge,max=math.huge,increment=1}
+                            {name = "crStaffAllowVolunteers",
+                                -- was in: crStaffMenu
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=1,
+                                    settingNames="set_switch",
+                                },
+                                description = "Staff: Allow Volunteers",
+                                help = "Whether or not volunteer staff will appear.",
+                            },
+                            {name = "crResultAllowRankRestrictedItems",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Rank: Allow Rank-Restricted Items",
+                                help = "Whether or not your rank will be docked for having a rank restricting item.",
+                            },
+                        },
+                    },
+                },
+            },
+            {name = "crActionsMenu",
+                type = "menu",
+                setting = {},
+                description = "Chet Rippo Actions menu",
+                help = "All quick-actions Chet Rippo provides.\nThese are all kept in one place so you have less menus to jump through than you would otherwise.",
+                children = {
+                    {name = "crChetRippoBux",
                         type = "ivar",
                         setting = {
                             save=IvarProc.EXTERNAL,
                             default=this.CONSTS.MAX_LOCAL_GMP,
                             range=this.infiniteRange,
                         },
-                        description = "Chet Rippo Bux",
+                        description = "Bank: Chet Rippo Bux",
                         help = "How many CRB/GMP you'd like to operate on.",
                     },
-                    {
-                        name = "bankPrintGMP",
+                    {name = "bankPrintGMP",
                         type = "command",
                         setting = {
                             command = "ChetRippo.BankPrintGMP",
                         },
-                        description = "Print CRB Balance",
+                        description = "Bank: Print CRB Balance",
                         help = "Shows you how much GMP you converted to Chet Rippo Bux.",
                     },
-                    {
-                        name = "bankDepositGMP",
+                    {name = "bankDepositGMP",
                         type = "command",
                         setting = {
                             command = "ChetRippo.BankDepositGMP",
                         },
-                        description = "Deposit GMP for CRB",
+                        description = "Bank: Deposit GMP for CRB",
                         help = "Convert excess GMP into Chet Rippo Bux.",
                     },
-                    {
-                        name = "bankWithdrawGMP",
+                    {name = "bankWithdrawGMP",
                         type = "command",
                         setting = {
                             command = "ChetRippo.BankWithdrawGMP"
                         },
-                        description = "Withdraw CRB for GMP",
+                        description = "Bank: Withdraw CRB for GMP",
                         help = "Convert Chet Rippo Bux into GMP.",
                     },
-                    {
-                        name = "crChetRippoBuxToAbsolition",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.EXTERNAL,
-                            default=1000,
-                            range=this.infiniteRange,
-                        },
-                        description = "CRB To Absolition",
-                        help = "How many CRB you can donate for repentence.",
-                    },
-                    {
-                        name = "bankDonateCRB",
+                    {name = "bankDonateCRB",
                         type = "command",
                         setting = {
                             command = "ChetRippo.BankDonateCRB"
                         },
-                        description = "Donate CRB For Absolition",
+                        description = "Bank: Donate CRB For Absolition",
                         help = "Charitably give your CRB away.",
                     },
-                },
-            },
-            {name = "crMiscMenu",
-                type = "menu",
-                setting = {},
-                description = "Miscellenous menu",
-                help = "A sub-menu for settings I couldn't categorize.",
-                children = {
-                    {name = "crMiscSyncLocalTime",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=0,
-                            settingNames="set_switch",
-                        },
-                        description = "Sync Local Time",
-                        help = "If the time isn't sync'd, make it.",
-                    },
-                    -- {min=-math.huge,max=math.huge,increment=1}
-                    {name = "crMiscSyncLocalTimeOffset",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range={min=-23,max=23,increment=1},
-                            default=0,
-                        },
-                        description = "Local Time Hour Offset",
-                        help = "If the game is too bright based on local time.",
-                    },
-                    {name = "crStaffAllowVolunteers",
-                        -- was in: crStaffMenu
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=1,
-                            settingNames="set_switch",
-                        },
-                        description = "Allow Volunteers",
-                        help = "Whether or not volunteers will appear.",
-                    },
-                    {name = "crResultAllowRankRestrictedItems",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=0,
-                            settingNames="set_switch",
-                        },
-                        description = "Allow Rank-Restricted Items",
-                        help = "Whether or not your rank will be docked for having a rank restricting item.",
-                    },
-                    {name = "crCombatSupportHeliFlareWarps",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=0,
-                            settingNames="set_switch",
-                        },
-                        description = "Support Heli Flare Warps",
-                        help = "Allow you to teleport to the location a Support Heli flare deploys.\nSupport Heli will still appear.\nWatch out for the smoke!",
-                    },
-                    {name = "crCombatBaitZombifiesSoldiers",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=0,
-                            settingNames="set_switch",
-                        },
-                        description = "Bait Zombifies Soldiers",
-                        help = "A direct hit with bait will cause soldiers to become zombified.",
-                    },
-                    {name = "crCombatBirdsDropItems",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=0,
-                            settingNames="set_switch",
-                        },
-                        description = "Birds Drop Items",
-                         help = "Hitting a bird will cause them to drop a throwable item.\nThey love collecting trinkets.",
-                    },
-                },
-            },
-            {name = "crEmergencySuppliesMenu",
-                type = "menu",
-                setting = {},
-                description = "Emergency Supplies menu",
-                help = "A sub-menu for emergency supply related settings.",
-                children = {
-                    {
-                        name = "crEmergencySuppliesSuppressorsEnable",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=1,
-                            settingNames="set_switch",
-                        },
-                        description = "Enable Emergency Suppressors",
-                        help = "A suppressor will be made available every time one of yours breaks, if you can afford it.",
-                    },
-                    {
-                        name = "crEmergencySuppliesSuppressorsCost",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.EXTERNAL,
-                            default=2000,
-                            range=this.infiniteRange,
-                        },
-                        description = "Emergency Suppressor Cost",
-                        help = "How much GMP to spend when utilizing an emergency suppressor.",
-                    },
-                    {
-                        name = "emergencySuppressorBuyNow",
-                        type = "command",
-                        setting = {
-                            command = "ChetRippo.EmergencySuppressorBuyNow",
-                        },
-                        description = "Buy Suppressor",
-                        help = "Manually buy a suppressor.",
-                    },
-                },
-            },
-            {name = "crDGMPLossMenu",
-                type = "menu",
-                setting = {},
-                description = "Death GMP Loss menu",
-                help = "A sub-menu for death related settings.",
-                children = {
-                    {
-                        name = "crDeathGmpLossEnable",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=1,
-                            settingNames="set_switch",
-                        },
-                        description = "GMP Death Loss",
-                        help = "Do you want to lose GMP when you die?",
-                    },
-                    {
-                        name = "crDeathGmpLossIncludeGlobal",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=0,
-                            settingNames="set_switch",
-                        },
-                        description = "Include Global GMP",
-                        help = "Do you want your Global GMP to count toward your percentage value?",
-                    },
-                    {
-                        name = "crDeathGmpLossPercentage",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.EXTERNAL,
-                            default=25,
-                            range={max=100,min=0,increment=1},
-                            isPercent=true,
-                        },
-                        description = "Death GMP Loss %",
-                        help = "How much GMP to lose on death, as a percentage.",
-                    },
-                },
-            },
-            {name = "crHygieneMenu",
-                type = "menu",
-                setting = {},
-                description = "Hygiene menu",
-                help = "A sub-menu for toilet and shower related settings.",
-                children = {
-                    {
-                        name = "crHygieneProvisionalShowerEnable",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=1,
-                            settingNames="set_switch",
-                        },
-                        description = "Toilets Are Showers",
-                        help = "Do you want to get clean when you're on the john?",
-                    },
-                    {
-                        name = "crHygieneProvisionalShowerReduceDeployTime",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.EXTERNAL,
-                            default=24,
-                            range={max=72,min=0,increment=1},
-                            noBounds=true,
-                        },
-                        description = "Deployment Reduction Time",
-                        help = "How much each shower reduces your time deployed (in in-game hours).",
-                    },
-                    {
-                        name = "crHygieneProvisionalShowerWallMinutesBetweenUses",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.EXTERNAL,
-                            default=5,
-                            range={max=60,min=0,increment=1},
-                            noBounds=true,
-                        },
-                        description = "Wall Minutes Between Uses",
-                        help = "How many minutes (irl, regardless of time scale) between uses of a toilet as a provisional shower.",
-                    },
-                    {
-                        name = "crHygieneDumpsterEnable",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=1,
-                            settingNames="set_switch",
-                        },
-                        description = "Dumpsters Make You Stinky",
-                        help = "Do you want to get dirty, and keep Ocelot away from you?",
-                    },
-                    {
-                        name = "crHygieneDumpsterDirtinessIncreaseDeployTime",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.EXTERNAL,
-                            default=4,
-                            range={max=72,min=0,increment=1},
-                            noBounds=true,
-                        },
-                        description = "Dumpster Dirtiness Increase Time",
-                        help = "How much stinkier you get for jumping into a dumpster (in in-game hours).",
-                    },
-                    {
-                        name = "crHygieneReallowQuietShowerCutscene",
-                        type = "ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=0,
-                            settingNames="set_switch",
-                        },
-                        description = "Reallow Quiet Cutscene",
-                        help = "Forcibly toggle the flag to replay the cutscene with Quiet in Mother Base by disabling the flag for having seen it, every time it is active.",
-                    },
-                    {
-                        name = "crHygieneSniffCheck",
+                    {name = "crHygieneSniffCheck",
                         type = "command",
                         setting = {
                             command = "ChetRippo.CrHygieneSniffCheck"
                         },
-                        description = "Sniff Check",
+                        description = "Hygiene: Sniff Check",
                         help = "Get intel on how stinky you are.",
                     },
-                },
-            },
-            {name = "crDeployTweaksMenu",
-                type = "menu",
-                setting = {},
-                description = "Deploy Tweaks menu",
-                help = "A sub-menu for tweaking deployment settings.",
-                children = {
-                    {
-                        name = "crDeployTweaksBasicParamsMenu",
-                        type = "menu",
-                        setting = {},
-                        description = "Basic Params menu",
-                        help = "A sub-menu for tweaking basic parameters settings.",
-                        children = {
-                            {
-                                name = "crDeployTweaksBPmissionListRefreshTimeMinute",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=12,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "missionListRefreshTimeMinute",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPdrawCountPerSr",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=10,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "drawCountPerSr",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPdrawCountPerR",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=4,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "drawCountPerR",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPpowerTransitVehicle",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=200,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "powerTransitVehicle",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPpowerBattleVehicle",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=800,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "powerBattleVehicle",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPpowerWalkerGear",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=1200,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "powerWalkerGear",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPpowerBattleGear",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=3500,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "powerBattleGear",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPminusWinRateTransitVehicle",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=5,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "minusWinRateTransitVehicle",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPminusWinRateBattleVehicle",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=10,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "minusWinRateBattleVehicle",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPminusWinRateWalkerGear",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=15,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "minusWinRateWalkerGear",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPminusWinRateBattleGear",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=50,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "minusWinRateBattleGear",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPwinRateMin",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=5,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "winRateMin",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPwinRateMax",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=95,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "winRateMax",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPdeadRateMin",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=3,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "deadRateMin",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPdeadRateMax",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=50,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "deadRateMax",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPdeadRateUpDownCorrection",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=1,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "deadRateUpDownCorrection",
-                                help = "?",
-                            },
-                            {
-                                name = "crDeployTweaksBPteamStaffCountMin",
-                                type="ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=this.infiniteRange,
-                                    default=5,
-                                    OnChange=this.RecomputeDeployTweaks,
-                                },
-                                description = "teamStaffCountMin",
-                                help = "?",
-                            },
-                        },
-                    },
-                    {
-                        name = "crDeployTweaksEnable",
-                        type = "ivar",
+                    {name = "emergencySuppressorBuyNow",
+                        type = "command",
                         setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=Ivars.switchRange,
-                            default=1,
-                            settingNames="set_switch",
-                            OnChange=this.RecomputeDeployTweaks,
+                            command = "ChetRippo.EmergencySuppressorBuyNow",
                         },
-                        description = "Deploy Tweaks",
-                        help = "Do you want to tweak deployments?",
+                        description = "E.Supplies: Buy Suppressor",
+                        help = "Manually buy a suppressor.",
                     },
-                    {
-                        name = "crDeployTweaksTimeMinuteMin",
-                        type="ivar",
+                    {name = "gOREHardLoadCheckPoint",
+                        type = "command",
+                        debug = true,
                         setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=this.infiniteRange,
-                            default=10,
-                            OnChange=this.RecomputeDeployTweaks,
+                            command = "ChetRippo.GOREHardLoadCheckPoint",
                         },
-                        description = "timeMinuteMin",
-                        help = "?",
+                        description = "Debug: Hard Reload",
+                        help = "Reload from last checkpoint + reload scripts.",
                     },
-                    {
-                        name = "crDeployTweaksTimeMinuteMax",
-                        type="ivar",
+                    {name = "gORESaveCheckPoint",
+                        type = "command",
+                        debug = true,
                         setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=this.infiniteRange,
-                            default=120,
-                            OnChange=this.RecomputeDeployTweaks,
+                            command = "ChetRippo.GORESaveCheckPoint",
                         },
-                        description = "timeMinuteMax",
-                        help = "?",
+                        description = "Debug: Save CheckPoint",
+                        help = "Convenient place to save before a reload.",
                     },
-                    {
-                        name = "crDeployTweaksTimeMinuteRandomMin",
-                        type="ivar",
+                    {name = "gOREDumpAllToFile",
+                        type = "command",
+                        debug = true,
                         setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=this.infiniteRange,
-                            default=5,
-                            OnChange=this.RecomputeDeployTweaks,
+                            command = "ChetRippo.GOREDumpAllToFile",
                         },
-                        description = "timeMinuteRandomMin",
-                        help = "?",
-                    },
-                    {
-                        name = "crDeployTweaksTimeMinuteRandomMax",
-                        type="ivar",
-                        setting = {
-                            save=IvarProc.CATEGORY_EXTERNAL,
-                            range=this.infiniteRange,
-                            default=60,
-                            OnChange=this.RecomputeDeployTweaks,
-                        },
-                        description = "timeMinuteRandomMax",
-                        help = "?",
+                        description = "Debug: Dump To File",
+                        help = "Dump the global state to a timestamped file named \"gore_dump_\" in the /mod/ directory.",
                     },
                 },
             },
             -- [[ == NOT READY == ]]
             --[[
+            {name = "crCombatBirdsDropItems",
+                type = "ivar",
+                setting = {
+                    save=IvarProc.CATEGORY_EXTERNAL,
+                    range=Ivars.switchRange,
+                    default=0,
+                    settingNames="set_switch",
+                },
+                description = "Combat: Birds Drop Items",
+                help = "Hitting a bird will cause them to drop a throwable item.\nThey love collecting trinkets.",
+            },
             {name = "crInfinityMenu",
                 type = "menu",
                 setting = {},
@@ -738,8 +777,6 @@ this.ultraVars = {
                     
                 },
             },
-            ]]
-            -- [[ == DEBUG == ]]
             {name = "crDebugMenu",
                 type = "menu",
                 debug = true,
@@ -747,35 +784,10 @@ this.ultraVars = {
                 description = "Debug menu",
                 help = "A developer-only menu settings.",
                 children = {
-                    {
-                        name = "gOREHardLoadCheckPoint",
-                        type = "command",
-                        setting = {
-                            command = "ChetRippo.GOREHardLoadCheckPoint",
-                        },
-                        description = "Hard Reload",
-                        help = "Reload from last checkpoint + reload scripts.",
-                    },
-                    {
-                        name = "gORESaveCheckPoint",
-                        type = "command",
-                        setting = {
-                            command = "ChetRippo.GORESaveCheckPoint",
-                        },
-                        description = "Save CheckPoint",
-                        help = "Convenient place to save before a reload.",
-                    },
-                    {
-                        name = "gOREDumpAllToFile",
-                        type = "command",
-                        setting = {
-                            command = "ChetRippo.GOREDumpAllToFile",
-                        },
-                        description = "Dump: To File",
-                        help = "Dump the global state to a timestamped file named \"gore_dump_\" in the /mod/ directory.",
-                    },
+
                 },
             },
+            ]]
         },
     },
 }
@@ -783,15 +795,12 @@ this.ultraVars = {
 local namespace = "ChetRippo"
 function this.GenerateIvars(parentMenu, depthIndex, depthValue)
     local depthName = depthValue.name
-    InfCore.PrintInspect(depthValue, {varName=(parentMenu or '[unparented]') .. " => (" .. tostring(depthName) .. ": " .. tostring(depthValue) .. ")"})
     this.langStrings.eng[depthName] = depthValue.description
     this.langStrings.help.eng[depthName] = depthValue.help
-    local allow_menu = (depthValue.debug == true and this.debugModule == true) or (depthValue.debug ~= true)
-    -- (this.debugModule and (depthValue.debug == this.debugModule)) or (this.debugModule and (depthValue.debug == this.debugModule))
-    
-    
-    if depthValue.type ~= nil and depthValue.type == "menu" then
-        if allow_menu then
+    local allow_debug = (depthValue.debug == true and (this.debugModule == true or Ivars.debugMode:Is(1))) or (depthValue.debug ~= true)
+
+    if allow_debug then
+        if depthValue.type ~= nil and depthValue.type == "menu" then
             table.insert(this.registerMenus, depthName)
             this[depthName] = depthValue.setting
             if parentMenu == nil then
@@ -808,16 +817,16 @@ function this.GenerateIvars(parentMenu, depthIndex, depthValue)
             end
 
             return (namespace .. "." .. depthName), this[depthName]
-        end
-    elseif depthValue.type ~= nil and depthValue.type == "ivar" then
-        table.insert(this.registerIvars, depthName)
-        this[depthName] = depthValue.setting
+        elseif depthValue.type ~= nil and depthValue.type == "ivar" then
+            table.insert(this.registerIvars, depthName)
+            this[depthName] = depthValue.setting
 
-        -- set up the rest of the menu
-        return ("Ivars." .. depthName), this[depthName]
-    elseif depthValue.type ~= nil and depthValue.type == "command" then
-        -- set up the rest of the menu
-        return depthValue.setting.command, nil
+            -- set up the rest of the menu
+            return ("Ivars." .. depthName), this[depthName]
+        elseif depthValue.type ~= nil and depthValue.type == "command" then
+            -- set up the rest of the menu
+            return depthValue.setting.command, nil
+        end
     end
 end
 
@@ -869,14 +878,12 @@ this.GOREDumpFoxTable = function(vars)
     --tex is actually a foxTable
     if type(foxTable)=="table" then
       if foxTable[arrayCountIdent] then
-        --InfCore.Log("found foxTable "..k)--DEBUGNOW
         if type(k)=="string" then
           if not skipKeys[k] then
             local foxTableArray=foxTable[arrayIdent]
             if foxTableArray then
               varsTable[k]={}
               local arrayCount=foxTable[arrayCountIdent]
-              --InfCore.Log("arrayCount="..arrayCount)--DEBUGNOW
               for i=0,arrayCount-1 do
                 varsTable[k][i]=vars[k][i]
               end
@@ -891,7 +898,6 @@ this.GOREDumpFoxTable = function(vars)
 end
 this.GOREDumpSaveTable = function(inputVars)
   if inputVars==nil then
-    InfCore.Log("DumpSaveVars inputVars==nil")
     return
   end
 
@@ -932,7 +938,6 @@ this.GOREWriteTable = function(fileName,header,t)
   if t==nil then
       return
   end
-  -- InfCore.Log("WriteTable "..fileName)
 
   local all=InfInspect.Inspect(t)
   all="local this="..all.."\r\n".."return this"
@@ -960,30 +965,28 @@ end
 
 
 function this.RecomputeDeployTweaks()
-    -- InfCore.Log("#&#&#&# we are recomputing Deploy Tweaks", true, "debug")
     if this.vars.interceptedDeployMissionBasicParams ~= nil then
-        -- InfCore.Log("%=%=%=% ben of drill", true, "debug")
         local live = this.vars.livingDeployMissionBasicParams
 
-        live.missionListRefreshTimeMinute = Ivars.crDeployTweaksBPmissionListRefreshTimeMinute:Get()
-        live.drawCountPerSr = Ivars.crDeployTweaksBPdrawCountPerSr:Get()
-        live.drawCountPerR = Ivars.crDeployTweaksBPdrawCountPerR:Get()
-        live.powerTransitVehicle = Ivars.crDeployTweaksBPpowerTransitVehicle:Get()
-        live.powerBattleVehicle = Ivars.crDeployTweaksBPpowerBattleVehicle:Get()
-        live.powerWalkerGear = Ivars.crDeployTweaksBPpowerWalkerGear:Get()
-        live.powerBattleGear = Ivars.crDeployTweaksBPpowerBattleGear:Get()
-        live.minusWinRateTransitVehicle = Ivars.crDeployTweaksBPminusWinRateTransitVehicle:Get()
-        live.minusWinRateBattleVehicle = Ivars.crDeployTweaksBPminusWinRateBattleVehicle:Get()
-        live.minusWinRateWalkerGear = Ivars.crDeployTweaksBPminusWinRateWalkerGear:Get()
-        live.minusWinRateBattleGear = Ivars.crDeployTweaksBPminusWinRateBattleGear:Get()
-        live.winRateMin = Ivars.crDeployTweaksBPwinRateMin:Get()
-        live.winRateMax = Ivars.crDeployTweaksBPwinRateMax:Get()
-        live.deadRateMin = Ivars.crDeployTweaksBPdeadRateMin:Get()
-        live.deadRateMax = Ivars.crDeployTweaksBPdeadRateMax:Get()
-        live.deadRateUpDownCorrection = Ivars.crDeployTweaksBPdeadRateUpDownCorrection:Get()
-        live.teamStaffCountMin = Ivars.crDeployTweaksBPteamStaffCountMin:Get()
-
-        --InfCore.PrintInspect(live,{varName="$+$+$+$ Basic Mission Params"})
+        if Ivars.crVODeployMissionParamsEnable:Is(1) then
+            live.missionListRefreshTimeMinute = Ivars.crDeployBasicParamVOmissionListRefreshTimeMinute:Get()
+            live.drawCountPerSr = Ivars.crDeployBasicParamVOdrawCountPerSr:Get()
+            live.drawCountPerR = Ivars.crDeployBasicParamVOdrawCountPerR:Get()
+            live.powerTransitVehicle = Ivars.crDeployBasicParamVOpowerTransitVehicle:Get()
+            live.powerBattleVehicle = Ivars.crDeployBasicParamVOpowerBattleVehicle:Get()
+            live.powerWalkerGear = Ivars.crDeployBasicParamVOpowerWalkerGear:Get()
+            live.powerBattleGear = Ivars.crDeployBasicParamVOpowerBattleGear:Get()
+            live.minusWinRateTransitVehicle = Ivars.crDeployBasicParamVOminusWinRateTransitVehicle:Get()
+            live.minusWinRateBattleVehicle = Ivars.crDeployBasicParamVOminusWinRateBattleVehicle:Get()
+            live.minusWinRateWalkerGear = Ivars.crDeployBasicParamVOminusWinRateWalkerGear:Get()
+            live.minusWinRateBattleGear = Ivars.crDeployBasicParamVOminusWinRateBattleGear:Get()
+            live.winRateMin = Ivars.crDeployBasicParamVOwinRateMin:Get()
+            live.winRateMax = Ivars.crDeployBasicParamVOwinRateMax:Get()
+            live.deadRateMin = Ivars.crDeployBasicParamVOdeadRateMin:Get()
+            live.deadRateMax = Ivars.crDeployBasicParamVOdeadRateMax:Get()
+            live.deadRateUpDownCorrection = Ivars.crDeployBasicParamVOdeadRateUpDownCorrection:Get()
+            live.teamStaffCountMin = Ivars.crDeployBasicParamVOteamStaffCountMin:Get()
+        end
 
         this.wrap.TppMotherBaseManagement.RegisterDeployBasicParam(live)
     end
@@ -991,77 +994,48 @@ function this.RecomputeDeployTweaks()
     for mission_id, mission_params in pairs(this.vars.interceptedDeployMissionParams) do
         local mdead = this.vars.interceptedDeployMissionParams[mission_id]
         local mlive = this.vars.livingDeployMissionParams[mission_id]
-        --local mode = Ivars.crDeployTweaksDeadRateMode:Get()
 
-        --[[
-            winRateMin = 5,
-            winRateMax = 100,
-            deadRateMin = 0,
-            deadRateMax = 0,
-        ]]
+        if Ivars.crVODeployBasicParamsEnable:Is(1) then
+            mlive.deadRate = this.MapValue(mdead.deadRate,
+                this.vars.interceptedDeployMissionBasicParams.deadRateMin,
+                this.vars.interceptedDeployMissionBasicParams.deadRateMax,
+                this.vars.livingDeployMissionBasicParams.deadRateMin,
+                this.vars.livingDeployMissionBasicParams.deadRateMax
+            )
+            mlive.baseWinRate = this.MapValue(mdead.baseWinRate,
+                this.vars.interceptedDeployMissionBasicParams.winRateMin,
+                this.vars.interceptedDeployMissionBasicParams.winRateMax,
+                this.vars.livingDeployMissionBasicParams.winRateMin,
+                this.vars.livingDeployMissionBasicParams.winRateMax
+            )
 
-        --[[
-            baseWinRate = 50,
-            deadRate = 20,
-            timeMinute = 120,
-            timeMinuteRandom = 60,
-        ]]
-
-        mlive.deadRate = this.MapValue(mdead.deadRate,
-            this.vars.interceptedDeployMissionBasicParams.deadRateMin,
-            this.vars.interceptedDeployMissionBasicParams.deadRateMax,
-            this.vars.livingDeployMissionBasicParams.deadRateMin,
-            this.vars.livingDeployMissionBasicParams.deadRateMax
-        )
-        mlive.baseWinRate = this.MapValue(mdead.baseWinRate,
-            this.vars.interceptedDeployMissionBasicParams.winRateMin,
-            this.vars.interceptedDeployMissionBasicParams.winRateMax,
-            this.vars.livingDeployMissionBasicParams.winRateMin,
-            this.vars.livingDeployMissionBasicParams.winRateMax
-        )
-
-        mlive.timeMinute = this.MapValue(mdead.timeMinute,
-            this.vars.timeMinuteMin,
-            this.vars.timeMinuteMax,
-            Ivars.crDeployTweaksTimeMinuteMin:Get(),
-            Ivars.crDeployTweaksTimeMinuteMax:Get()
-        )
-        mlive.timeMinuteRandom = this.MapValue(mdead.timeMinuteRandom,
-            this.vars.timeMinuteRandomMin,
-            this.vars.timeMinuteRandomMax,
-            Ivars.crDeployTweaksTimeMinuteRandomMin:Get(),
-            Ivars.crDeployTweaksTimeMinuteRandomMax:Get()
-        )
-
-        --[[
-        if mode == 0 then
-            live.deadRate = math.floor(dead.deadRate * 2)
-        elseif mode == 1 then
-            live.deadRate = math.floor(dead.deadRate * (Ivars.crDeployTweaksDeadRateValue:Get()/100))
-        elseif mode == 2 then
-            live.deadRate = math.floor(Ivars.crDeployTweaksDeadRateValue:Get())
+            mlive.timeMinute = this.MapValue(mdead.timeMinute,
+                this.vars.timeMinuteMin,
+                this.vars.timeMinuteMax,
+                Ivars.crDeployMissionParamsVOTimeMinuteMin:Get(),
+                Ivars.crDeployMissionParamsVOTimeMinuteMax:Get()
+            )
+            mlive.timeMinuteRandom = this.MapValue(mdead.timeMinuteRandom,
+                this.vars.timeMinuteRandomMin,
+                this.vars.timeMinuteRandomMax,
+                Ivars.crDeployMissionParamsVOTimeMinuteRandomMin:Get(),
+                Ivars.crDeployMissionParamsVOTimeMinuteRandomMax:Get()
+            )
         end
-        ]]
 
-        -- InfCore.Log("#=#=#=# recomputing ["..mode.."] a Deploy Tweak: deployMissionId="..live.deployMissionId..",deadRate="..live.deadRate, true, "debug")
-
-        this.wrap.TppMotherBaseManagement__RegisterDeployMissionParam(mlive)
+        this.wrap.TppMotherBaseManagement.RegisterDeployMissionParam(mlive)
     end
-    --TppMotherBaseManagement.ResetDeploySvars()
 end
 
 function this.BankPrintGMP()
-    InfCore.Log("Current Balance: "..formatLikeBalance("CRB", igvars.crBalance), true)
+    TppUiCommand.AnnounceLogView("Current Balance: "..formatLikeBalance("CRB", igvars.crBalance))
 end
 
 function this.BankDepositGMP()
     local totalGMP = this.GetAvailableGMP(true)
-
-    --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp()), true, "debug")
-
     local actionableGMP = math.min(math.max(totalGMP,0), math.max(Ivars.crChetRippoBux:Get(),0))
 
-    InfCore.Log("Deposited To CRB "..formatLikeBalance("GMP", -actionableGMP), true)
+    TppUiCommand.AnnounceLogView("Deposited To CRB "..formatLikeBalance("GMP", -actionableGMP))
     igvars.crBalance = igvars.crBalance + actionableGMP
 
     TppTerminal.UpdateGMP({gmp=-actionableGMP})
@@ -1070,13 +1044,9 @@ end
 function this.BankWithdrawGMP()
     local totalGMP = this.GetAvailableGMP(true)
     local maxWithdraw = this.CONSTS.MAX_LOCAL_GMP - totalGMP
-    --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw), true, "debug")
-
     local actionableGMP = math.min(math.max(Ivars.crChetRippoBux:Get(),0), math.max(maxWithdraw,0))
 
-    --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
-    --InfCore.Log("totalGMP="..tostring(totalGMP)..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
-    InfCore.Log("Withdrew From CRB " + formatLikeBalance("GMP", actionableGMP), true)
+    TppUiCommand.AnnounceLogView("Withdrew From CRB " .. formatLikeBalance("GMP", actionableGMP))
     igvars.crBalance = igvars.crBalance - actionableGMP
 
     TppTerminal.UpdateGMP({gmp=actionableGMP})
@@ -1085,8 +1055,6 @@ end
 function this.BankDonateCRB()
     local totalCRB = igvars.crBalance
     local spending = math.max(Ivars.crChetRippoBuxToAbsolition:Get(),0)
-    --local maxWithdraw = this.CONSTS.MAX_LOCAL_GMP - totalCRB
-    --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw), true, "debug")
 
     local actionableCRB = math.min(math.max(Ivars.crChetRippoBux:Get(),0), math.max(totalCRB,0))
     local changeInHeroism = math.floor(math.max(actionableCRB/spending, 0))
@@ -1099,10 +1067,7 @@ function this.BankDonateCRB()
     })
     igvars.crBalance = math.max(igvars.crBalance - actionableCRB, 0)
 
-    --InfCore.Log("wallet=" .. tostring(vars.mbmServerWalletGmp) .. ",totalGMP="..tostring(totalGMP)..",getGMP="..tostring(TppMotherBaseManagement.GetGmp())..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
-    --InfCore.Log("totalGMP="..tostring(totalGMP)..",maxWithdraw="..tostring(maxWithdraw)..",actionableGMP="..tostring(actionableGMP), true, "debug")
-    InfCore.Log("Donated CRB: "..formatLikeBalance("CRB", -actionableCRB).." "..formatLikeBalance("Heroism", changeInHeroism).." ", true, "debug")
-    --TppTerminal.UpdateGMP({gmp=actionableGMP})
+    TppUiCommand.AnnounceLogView("Donated CRB: "..formatLikeBalance("CRB", -actionableCRB).." "..formatLikeBalance("Heroism", changeInHeroism))
 end
 
 function this.HandleHygieneEvent(hygieneEvent)
@@ -1198,7 +1163,6 @@ function this.OnFadeInForShower()
 end
 
 function this.OnFadeInForGMPLoss()
-    --InfCore.Log("Death Fade In: "..tostring(Ivars.crDeathGmpLossEnable:Is(1)), true, "debug")
     if Ivars.crDeathGmpLossEnable:Is(0) then return end
     local totalGMP = this.GetAvailableGMP(not Ivars.crDeathGmpLossIncludeGlobal:Is(1))
 
@@ -1223,15 +1187,11 @@ function this.OnFulton(gameObjectId, gimmckInstance, gimmckDataSet, staffID)
 end
 
 function this.OnDeath(playerId,deathTypeStr32)
-    --InfCore.Log("[dead] playerId="..tostring(playerId)..",deathType="..deathTypeStr32, true, "debug")
     if Ivars.crDeathGmpLossEnable:Is(0) then return end
 	if (deathTypeStr32~=InfCore.StrCode32("FallDeath")) and 
 		(deathTypeStr32~=InfCore.StrCode32("Suicide")) and 
 		(not TppMission.IsFOBMission(vars.missionCode)) then
-        --InfCore.Log("[dead] was valid", true, "debug")
 		this.vars.crDeathGmpLossValidDeath = true
-    --else
-        --InfCore.Log("[dead] was not valid", true, "debug")
     end
 end
 
@@ -1280,13 +1240,6 @@ end
 -- not OnUpdate
 function this.Update()
     this.SyncLocalTime()
-    --[[
-    vars.ammoStockCounts[16] = 54000
-    vars.ammoStockCounts[17] = 54000
-    vars.totalBatteryPowerAsGmp = 61525
-    ]]
-    --TppPlayer.SetMissionStartAmmoCount()
-    --InfCore.Log("oy")
 end
 
 function this.EmergencySuppressorBuyNow()
@@ -1306,7 +1259,7 @@ function this.LocateObject(gameId,fallBackToPlayer)
             outPos = TppPlayer.GetPosition()
             outPos = Vector3(outPos[1],outPos[2],outPos[3])
         else
-            InfCore.Log("WARNING: ChetRippo.LocateObject: GetPosition nil for gameId:"..tostring(gameId)..", no player fallback")
+            InfCore.LogWarning("WARNING: ChetRippo.LocateObject: GetPosition nil for gameId:"..tostring(gameId)..", no player fallback")
         end
     else
         outPos=Vector3(outPos:GetX(),outPos:GetY(),outPos:GetZ())
@@ -1354,7 +1307,7 @@ function this.GetPlayerGradeForEquip(equipName)
         local matchingEquipId = vars.supportWeapons[matchIndex]
         local matchingEquipName = InfLookup.TppEquip.equipId[ matchingEquipId ]
         if matchingEquipName then
-            InfCore.Log("peepee: found it " .. matchingEquipName, true, "debug")
+            InfCore.LogDebug("ChetRippo.GetPlayerGradeForEquip: found it " .. matchingEquipName)
             return matchingEquipName
         end
     else
@@ -1404,7 +1357,7 @@ function this.GiveSuppressor()
             randomAngularVelocity = angularMax,
         })
 
-        InfCore.Log("Emergency Suppressor Deployed: [GMP -"..tostring(cost).."]", true, "debug")
+        TppUiCommand.AnnounceLogView("Emergency Suppressor Deployed: [GMP -"..tostring(cost).."]")
         TppTerminal.UpdateGMP({gmp=-cost})
         return item
     end
@@ -1423,7 +1376,7 @@ function this.BirdGotHurt(damagedId, attackId, attackerId)
     }
     local objectToDrop = dropPool[math.random(#dropPool)]
     local thingo = this.GetPlayerGradeForEquip(objectToDrop)
-    
+
     if thingo ~= nil and TppEquip[thingo] then
         objectToDrop = TppEquip[thingo]
     else
@@ -1444,8 +1397,7 @@ function this.BirdGotHurt(damagedId, attackId, attackerId)
             randomAngularVelocity = angularMax,
         })
 
-        InfCore.Log("Bird Dropped Item!", true)
-        --InfCore.Log("Emergency Suppressor Deployed: [GMP -"..tostring(cost).."]", true, "debug")
+        TppUiCommand.AnnounceLogView("Bird Dropped Item!")
         return item
     end
 end
@@ -1476,6 +1428,8 @@ function this.CaptureRegisterResourceParam(resource_params)
                 this.vars.timeMinuteRandomMin = mission_param.timeMinuteRandom
             end
             ]]
+
+            this.wrap.TppMotherBaseManagement.RegisterResourceParam(this.vars.livingResourceParam[resource_params.resource])
         end
     end
 end
@@ -1485,9 +1439,9 @@ function this.CaptureRegisterDeployBasicParam(basic_params)
     this.vars.livingDeployMissionBasicParams = clone(basic_params)
 
     if next(this.vars.interceptedDeployMissionBasicParams) ~= nil then
-        InfCore.Log("VXVXVX initiating parameters", true, "debug")
+        InfCore.LogDebug("ChetRippo.CaptureRegisterDeployBasicParam initalizing", false)
     else
-        InfCore.Log("VXVXVX called again?", true, "debug")
+        InfCore.LogCritical("WARNING: ChetRippo.CaptureRegisterDeployBasicParam called twice?", false)
     end
 end
 
@@ -1516,13 +1470,13 @@ end
 
 function this.WrapAddVolunteerStaffs(...)
     if Ivars.crStaffAllowVolunteers:Is(1) then
-        this.wrap.TppTerminal__AddVolunteerStaffs(...)
+        this.wrap.TppTerminal.AddVolunteerStaffs(...)
     end
     -- else: buzz off
 end
 function this.WrapIsUsedRankLimitedItem(...)
     if Ivars.crResultAllowRankRestrictedItems:Is(1) then
-        this.wrap.TppResult__IsUsedRankLimitedItem(...)
+        this.wrap.TppResult.IsUsedRankLimitedItem(...)
     end
     -- else: buzz off
 end
@@ -1547,7 +1501,7 @@ local function GenerateWrapper(path,wrapFunc)
         root[stop] = wrappingPath[stop]
         wrappingPath[stop] = wrapFunc
     else
-        InfCore.Log("#*#*#*# GAMERA MOMENT -- wrapping [" .. path .. "] a second time!!!", true, "debug")
+        InfCore.LogWarn("WARNING: ChetRippo.GenerateWrapper wrapping [" .. path .. "] a second time!!!", false)
     end
 end
 
@@ -1556,10 +1510,8 @@ GenerateWrapper("TppMotherBaseManagement.RegisterDeployBasicParam", this.Capture
 GenerateWrapper("TppMotherBaseManagement.RegisterDeployMissionParam", this.CaptureRegisterDeployMissionParam)
 GenerateWrapper("TppTerminal.AddVolunteerStaffs", this.WrapAddVolunteerStaffs)
 GenerateWrapper("TppResult.IsUsedRankLimitedItem", this.WrapIsUsedRankLimitedItem)
--- TESTING BELOW:
 
 --[[ == IH/IHHOOK STUFF HERE == ]]
-
 function this.Messages()
     local dinko = Tpp.StrCode32Table({
         --[[
@@ -1615,7 +1567,6 @@ function this.Messages()
             {msg="EndFadeOut",sender="OnEstablishMissionClearFadeOut",func=this.DemoOverride},
         },
     })
-    -- InfCore.PrintInspect(dinko, {varName="dinko"})
     return dinko
 end
 
@@ -1624,12 +1575,11 @@ function this.OnMessage(sender, messageId, ...)
 end
 
 function this.Init(missionTable)
-  --this.Rebuild()
+  -- NOTE: rebuilding in here has NEVER worked out well
   this.messageExecTable=nil
   this.messageExecTable = Tpp.MakeMessageExecTable(this.Messages())
 
   this.RecomputeDeployTweaks()
-  --this.Rebuild()
 end
 
 this.OnReload = this.Init
@@ -1643,7 +1593,7 @@ function this.Rebuild()
             eng={},
         },
     }
-    --this.GenerateIvars(nil, nil, this.ultraVars)
+
     for var, value in pairs(this.ultraVars) do
         this.GenerateIvars(nil, var, value)
     end
