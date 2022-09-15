@@ -37,6 +37,10 @@ foreach($dir in $dirs){
     $StartInfo.WorkingDirectory = Split-Path -Path "$($config.makebite_path)"
     $proc = [System.Diagnostics.Process]::Start($StartInfo).WaitForExit()
 
+    # blank the xml description to reduce commit noise
+    $metadata.ModEntry.Description = ""
+    $metadata.Save("$PSScriptRoot\$dir\metadata.xml")
+
     # remove more potentially pre-existing artifacts
     # then, move the mod to the root
     $zip_name = "$PSScriptRoot\_builds\$file_name.zip"

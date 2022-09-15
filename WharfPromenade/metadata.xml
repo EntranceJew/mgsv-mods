@@ -1,13 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <ModEntry xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Name="Wharf Promenade" Version="1.0" Author="EntranceJew" Website="https://twitter.com/EntranceJew">
   <MGSVersion Version="1.0.15.3" />
   <SBVersion Version="0.0.0.0" />
-  <Description>This is a debug script where I keep features I might want to break out on their own.
-
-1.0:
-- Initial Release
-
-[SBWM]</Description>
+  <Description>
+  </Description>
   <QarEntries />
   <FpkEntries />
   <FileEntries />

@@ -10,6 +10,9 @@ A multitude of menus that allow you to:
 - Allows customizing the deployment timers AND the min/max chance of suffering losses + victory.
 - [DEBUG] shortcut to hard-reload scripts / save a checkpoint / dump global variables
 
+1.01:
+- Hotfix to fix Vanilla Overrides busting Deployments in some scenarios.
+
 1.0:
 - Initial Release
 

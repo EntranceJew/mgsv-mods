@@ -968,7 +968,7 @@ function this.RecomputeDeployTweaks()
     if this.vars.interceptedDeployMissionBasicParams ~= nil then
         local live = this.vars.livingDeployMissionBasicParams
 
-        if Ivars.crVODeployMissionParamsEnable:Is(1) then
+        if Ivars.crVODeployBasicParamsEnable:Is(1) then
             live.missionListRefreshTimeMinute = Ivars.crDeployBasicParamVOmissionListRefreshTimeMinute:Get()
             live.drawCountPerSr = Ivars.crDeployBasicParamVOdrawCountPerSr:Get()
             live.drawCountPerR = Ivars.crDeployBasicParamVOdrawCountPerR:Get()
@@ -995,7 +995,7 @@ function this.RecomputeDeployTweaks()
         local mdead = this.vars.interceptedDeployMissionParams[mission_id]
         local mlive = this.vars.livingDeployMissionParams[mission_id]
 
-        if Ivars.crVODeployBasicParamsEnable:Is(1) then
+        if Ivars.crVODeployMissionParamsEnable:Is(1) then
             mlive.deadRate = this.MapValue(mdead.deadRate,
                 this.vars.interceptedDeployMissionBasicParams.deadRateMin,
                 this.vars.interceptedDeployMissionBasicParams.deadRateMax,
@@ -1012,14 +1012,14 @@ function this.RecomputeDeployTweaks()
             mlive.timeMinute = this.MapValue(mdead.timeMinute,
                 this.vars.timeMinuteMin,
                 this.vars.timeMinuteMax,
-                Ivars.crDeployMissionParamsVOTimeMinuteMin:Get(),
-                Ivars.crDeployMissionParamsVOTimeMinuteMax:Get()
+                Ivars.crDeployMissionParamsVOtimeMinuteMin:Get(),
+                Ivars.crDeployMissionParamsVOtimeMinuteMax:Get()
             )
             mlive.timeMinuteRandom = this.MapValue(mdead.timeMinuteRandom,
                 this.vars.timeMinuteRandomMin,
                 this.vars.timeMinuteRandomMax,
-                Ivars.crDeployMissionParamsVOTimeMinuteRandomMin:Get(),
-                Ivars.crDeployMissionParamsVOTimeMinuteRandomMax:Get()
+                Ivars.crDeployMissionParamsVOtimeMinuteRandomMin:Get(),
+                Ivars.crDeployMissionParamsVOtimeMinuteRandomMax:Get()
             )
         end
 
@@ -1528,7 +1528,7 @@ function this.Messages()
         GameObject={
             {msg="Damage",func=function(...)
                 this.ZombifyWithBait(...)
-                this.BirdGotHurt(...)
+                --this.BirdGotHurt(...)
             end,}
         },
         Player={

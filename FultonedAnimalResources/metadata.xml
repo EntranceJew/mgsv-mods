@@ -1,23 +1,9 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <ModEntry xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Name="FAR - Fultoned Animal Resources" Version="1.2" Author="EntranceJew" Website="https://twitter.com/EntranceJew">
   <MGSVersion Version="1.0.15.3" />
   <SBVersion Version="0.0.0.0" />
-  <Description>Allows you to receive a customizable amount of resources for when you fulton animals during missions based on their habitats. The rarer the animal, the greater the rewards.
-
-For modders: Also contains a wealth of information for each animal.
-
-1.2:
-- Corrected some vehicles being identified as a Gerbil.
-- Made UI prints more in-line with vanilla iDROID messages.
-- Added additional radio information to the database.
-1.1:
-- Added weighted random distribution. Higher yields, occasionally.
-- Fixed bug preventing the rarity mode paying out correctly.
-- Added detailed resource logging mode in the iDROID.
-1.0:
-- Initial Release
-
-[SBWM]</Description>
+  <Description>
+  </Description>
   <QarEntries />
   <FpkEntries />
   <FileEntries />
