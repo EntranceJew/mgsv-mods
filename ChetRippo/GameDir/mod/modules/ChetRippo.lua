@@ -1259,7 +1259,7 @@ function this.LocateObject(gameId,fallBackToPlayer)
             outPos = TppPlayer.GetPosition()
             outPos = Vector3(outPos[1],outPos[2],outPos[3])
         else
-            InfCore.LogWarning("WARNING: ChetRippo.LocateObject: GetPosition nil for gameId:"..tostring(gameId)..", no player fallback")
+            InfCore.Log("WARNING: ChetRippo.LocateObject: GetPosition nil for gameId:"..tostring(gameId)..", no player fallback", false, "warn")
         end
     else
         outPos=Vector3(outPos:GetX(),outPos:GetY(),outPos:GetZ())
@@ -1307,7 +1307,7 @@ function this.GetPlayerGradeForEquip(equipName)
         local matchingEquipId = vars.supportWeapons[matchIndex]
         local matchingEquipName = InfLookup.TppEquip.equipId[ matchingEquipId ]
         if matchingEquipName then
-            InfCore.LogDebug("ChetRippo.GetPlayerGradeForEquip: found it " .. matchingEquipName)
+            InfCore.Log("ChetRippo.GetPlayerGradeForEquip: found it " .. matchingEquipName, false, "debug")
             return matchingEquipName
         end
     else
@@ -1439,9 +1439,9 @@ function this.CaptureRegisterDeployBasicParam(basic_params)
     this.vars.livingDeployMissionBasicParams = clone(basic_params)
 
     if next(this.vars.interceptedDeployMissionBasicParams) ~= nil then
-        InfCore.LogDebug("ChetRippo.CaptureRegisterDeployBasicParam initalizing", false)
+        InfCore.Log("ChetRippo.CaptureRegisterDeployBasicParam initalizing", false, "debug")
     else
-        InfCore.LogCritical("WARNING: ChetRippo.CaptureRegisterDeployBasicParam called twice?", false)
+        InfCore.Log("WARNING: ChetRippo.CaptureRegisterDeployBasicParam called twice?", false, "critical")
     end
 end
 
@@ -1501,7 +1501,7 @@ local function GenerateWrapper(path,wrapFunc)
         root[stop] = wrappingPath[stop]
         wrappingPath[stop] = wrapFunc
     else
-        InfCore.LogWarn("WARNING: ChetRippo.GenerateWrapper wrapping [" .. path .. "] a second time!!!", false)
+        InfCore.Log("WARNING: ChetRippo.GenerateWrapper wrapping [" .. path .. "] a second time!!!", false, "warn")
     end
 end
 
