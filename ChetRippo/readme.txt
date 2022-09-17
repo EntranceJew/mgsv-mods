@@ -10,6 +10,10 @@ A multitude of menus that allow you to:
 - Allows customizing the deployment timers AND the min/max chance of suffering losses + victory.
 - [DEBUG] shortcut to hard-reload scripts / save a checkpoint / dump global variables
 
+1.1:
+- Adds a menu to enable earning Merit, Cross, and Honor Medals on mission results with configurable conditions per-medal.
+- Adds a Vanilla Override menu allowing configuring mission score requirements, bonuses, and other values pertaining to mission results.
+
 1.01:
 - Hotfix to fix Vanilla Overrides busting Deployments in some scenarios.
 

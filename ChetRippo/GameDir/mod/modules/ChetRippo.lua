@@ -65,6 +65,12 @@ this.ivarsPersist = {
     crBalance = 0,
     crHygieneProvisionalShowerLastUsed = 0,
 }
+--[[ we're going to exploit C modules being persisted to persist data between module reloads, heehee hoohoo ]]
+if CBox.wrap then
+    InfCore.Log("CBox.wrap already existed, so we must have been reloaded", false, "info")
+else
+    CBox.wrap = {}
+end
 this.wrap = {}
 this.vars = {
     crDeathGmpLossValidDeath = false,
@@ -76,6 +82,21 @@ this.vars = {
     interceptedResourceParam = {},
     livingResourceParam = {},
 
+    interceptedTppResultCommonScoreParam = {},
+    livingTppResultCommonScoreParam = {},
+
+    interceptedTppResultRankThreshold = {},
+    livingTppResultRankThreshold = {},
+
+    interceptedTppResultRankBaseScore = {},
+    livingTppResultRankBaseScore = {},
+
+    interceptedTppResultRankBaseGMP = {},
+    livingTppResultRankBaseGMP = {},
+
+    interceptedTppResultRankBaseScorePerMission = {},
+    livingTppResultRankBaseScorePerMission = {},
+
     timeMinuteMin = math.huge,
     timeMinuteMax = -math.huge,
     timeMinuteRandomMin = math.huge,
@@ -84,8 +105,7 @@ this.vars = {
 
 this.infiniteRange={min=-math.huge,max=math.huge,increment=1}
 this.ultraVars = {
-    {
-        name = "crMenu",
+    {name = "crMenu",
         type = "menu",
         setting = {},
         description = "Chet Rippo menu",
@@ -374,6 +394,641 @@ this.ultraVars = {
                                     },
                                 },
                             },
+                            {name = "crVOMenuTppResult",
+                                type = "menu",
+                                setting = {},
+                                description = "TppResult Overrides",
+                                help = "Everything to do with mission results and rank evaluations.",
+                                children = {
+                                    {name = "crVOTppResultCommonScoreParamMenu",
+                                        type = "menu",
+                                        setting = {},
+                                        description = "TppResult Common Score Param menu",
+                                        help = "These settings are for tweaking score bonuses related to mission completion",
+                                        children = {
+                                            {name = "crVOTppResultCommonScoreParamEnable",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Override TppResult Common Score Param Enable",
+                                                help = "Do you want to tweak mission completion bonuses?",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOnoReflexBonus",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=1e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "No Reflex Bonus",
+                                                help = "Score bonus for not using Reflex Mode during a mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOnoAlertBonus",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "No Alert Bonus",
+                                                help = "Score bonus for not raising any alerts during a mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOnoKillBonus",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "No Kill Bonus",
+                                                help = "Score bonus for not accruing any kills during a mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOnoRetryBonus",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "No Retry Bonus",
+                                                help = "Score bonus for not retrying from a checkpoint or getting a Game Over during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOperfectStealthNoKillBonus",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=2e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Perfect Stealth No Kill Bonus",
+                                                help = "Score bonus for not accruing any kills or entering a Combat Alert during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOnoTraceBonus",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=1e5,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "No Traces Bonus",
+                                                help = "Score bonus for not leaving any indication of your presence during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOfirstSpecialBonus",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "First Special Bonus",
+                                                help = "??? This value's purpose is not yet known.\nIt its believed to affect a special objective, not related to the individual mission tasks.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOsecondSpecialBonus",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Second Special Bonus",
+                                                help = "??? This value's purpose is not yet known.\nIt its believed to affect a special objective, not related to the individual mission tasks.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOalertCountValueToScoreRatio",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=-5e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Alert Count Value To Score Ratio",
+                                                help = "Score penalty per alert raised during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOrediscoveryCount",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=-500,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Rediscovery Count Value To Score Ratio",
+                                                help = "Score penalty per times rediscovered during a Combat Alert during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOtakeHitCount",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=-100,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Take Hit Count Penalty",
+                                                help = "Score penalty per hit taken during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOtacticalActionPoint",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=1e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Tactical Action Point Value To Scire Ratio",
+                                                help = "Score bonus per Tactical Action Point earned during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOhostageCount",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Hostage Count Value To Score Ratio",
+                                                help = "Score bonus per hostage rescued during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOmarkingCount",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=30,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Marking Count Value To Score Ratio",
+                                                help = "Score bonus per gameobject marked during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOinterrogateCount",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=150,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Interrogate Count Value To Score Ratio",
+                                                help = "Score bonus per interrogation option performed during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOheadShotCount",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=1e3,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Head Shot Count Value To Score Ratio",
+                                                help = "Score bonus per headshot landed during the mission.",
+                                            },
+                                            {name = "crTppResultCommonScoreParamsVOneutralizeCount",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=200,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Neutralize Count Value To Score Ratio",
+                                                help = "Score bonus per enemy neutralized during the mission.",
+                                            },
+                                        },
+                                    },
+                                    {name = "crVOTppResultRankThresholdMenu",
+                                        type = "menu",
+                                        setting = {},
+                                        description = "TppResult Rank Threshold menu",
+                                        help = "These settings are for tweaking baseline scores required to achieve each rank on a mission's completion.",
+                                        children = {
+                                            {name = "crVOTppResultRankThresholdEnable",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Override TppResult Rank Threshold Enable",
+                                                help = "Do you want to tweak mission rank threshold values?",
+                                            },
+                                            {name = "crTppResultRankThresholdVOrankS",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=11e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "S Rank Threshold",
+                                                help = "The score you need to exceed to achieve an S rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankThresholdVOrankA",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=9e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "A Rank Threshold",
+                                                help = "The score you need to exceed to achieve an A rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankThresholdVOrankB",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=7e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "B Rank Threshold",
+                                                help = "The score you need to exceed to achieve a B rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankThresholdVOrankC",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "C Rank Threshold",
+                                                help = "The score you need to exceed to achieve a C rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankThresholdVOrankD",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=3e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "D Rank Threshold",
+                                                help = "The score you need to exceed to achieve a D rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankThresholdVOrankE",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=0,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "E Rank Threshold",
+                                                help = "The score you need to exceed to achieve an E rank during a mission.",
+                                            },
+                                        },
+                                    },
+                                    {name = "crVOTppResultRankBaseScoreMenu",
+                                        type = "menu",
+                                        setting = {},
+                                        description = "TppResult Rank Base Score menu",
+                                        help = "These settings are for tweaking baseline scores rewarded for each mission completion rank.",
+                                        children = {
+                                            {name = "crVOTppResultRankBaseScoreEnable",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Override TppResult Rank Base Score Enable",
+                                                help = "Do you want to tweak mission rank score values?",
+                                            },
+                                            {name = "crVOTppResultRankBaseScoreForceUseBase",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Force Use Base Results Enable",
+                                                help = "Do you want all missions to have the same baseline score yield?\nUp to 4 vanilla missions have custom score tables, which will be overridden by this option.",
+                                            },
+                                            {name = "crTppResultRankBaseScoreVOrankS",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=11e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "S Rank Base Score",
+                                                help = "The score you get for acheiving an S rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseScoreVOrankA",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=9e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "A Rank Base Score",
+                                                help = "The score you get for acheiving an A rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseScoreVOrankB",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=7e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "B Rank Base Score",
+                                                help = "The score you get for acheiving a B rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseScoreVOrankC",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "C Rank Base Score",
+                                                help = "The score you get for acheiving a C rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseScoreVOrankD",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=3e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "D Rank Base Score",
+                                                help = "The score you get for acheiving a D rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseScoreVOrankE",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=0,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "E Rank Base Score",
+                                                help = "The score you get for acheiving an E rank during a mission.",
+                                            },
+                                        },
+                                    },
+                                    {name = "crVOTppResultRankBaseGMPMenu",
+                                        type = "menu",
+                                        setting = {},
+                                        description = "TppResult Rank Base GMP menu",
+                                        help = "These settings are for tweaking baseline GMP rewarded for each mission completion rank.",
+                                        children = {
+                                            {name = "crVOTppResultRankBaseGMPEnable",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "Override TppResult Rank Base GMP Enable",
+                                                help = "Do you want to tweak mission rank GMP values?",
+                                            },
+                                            {name = "crTppResultRankBaseGMPVOrankS",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=11e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "S Rank Base GMP",
+                                                help = "The GMP you get for acheiving an S rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseGMPVOrankA",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=9e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "A Rank Base GMP",
+                                                help = "The GMP you get for acheiving an A rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseGMPVOrankB",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=7e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "B Rank Base GMP",
+                                                help = "The GMP you get for acheiving a B rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseGMPVOrankC",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=5e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "C Rank Base GMP",
+                                                help = "The GMP you get for acheiving a C rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseGMPVOrankD",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=3e4,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "D Rank Base GMP",
+                                                help = "The GMP you get for acheiving a D rank during a mission.",
+                                            },
+                                            {name = "crTppResultRankBaseGMPVOrankE",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.EXTERNAL,
+                                                    default=0,
+                                                    range=this.infiniteRange,
+                                                    OnChange=this.RecomputeTppResultOverrides,
+                                                },
+                                                description = "E Rank Base GMP",
+                                                help = "The GMP you get for acheiving an E rank during a mission.",
+                                            },
+                                        },
+                                    },
+                                    {name = "crVOTppResultRankLimitedItemsMenu",
+                                        type = "menu",
+                                        setting = {},
+                                        description = "TppResult Rank Limited Items menu",
+                                        help = "These settings are for toggling which items will restrict your rank.",
+                                        children = {
+                                            {name = "crVOTppResultRankLimitedItemsEnable",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Override TppResult Rank Limited Items Enable",
+                                                help = "Do you want to tweak mission rank GMP values?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsChickenCap",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Chicken Cap",
+                                                help = "Should the Chicken Cap item restrict your mission rank?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsChickCap",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Chick Cap",
+                                                help = "Should the Chick Cap item restrict your mission rank?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsStealth",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Stealth",
+                                                help = "Should the Stealth item restrict your mission rank?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsInstantStealth",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Instant Stealth",
+                                                help = "Should the Instant Stealth item restrict your mission rank?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsFultonMissile",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Fulton Missile",
+                                                help = "Should the Fulton Missile item restrict your mission rank?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsParasiteCamo",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Parasite Camo",
+                                                help = "Should the Parasite Camo item restrict your mission rank?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsMugenBandana",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Mugen Bandana",
+                                                help = "Should the Mugen Bandana item restrict your mission rank?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsHighGradeEquip",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow High Grade Equipment",
+                                                help = "Should the High Grade Equipment item restrict your mission rank?",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsHeliAttack",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Heli Attack",
+                                                help = "Should the Heli Attack support option restrict your mission rank?\nWill only apply on missions where this restriction is set in the first place.",
+                                            },
+                                            {name = "crTppResultRankRestrictedItemsFireSupport",
+                                                type = "ivar",
+                                                setting = {
+                                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                                    range=Ivars.switchRange,
+                                                    default=0,
+                                                    settingNames="set_switch",
+                                                },
+                                                description = "Restriction: Allow Fire Support",
+                                                help = "Should the Fire Support support option restrict your mission rank?\nWill only apply on missions where this restriction is set in the first place.",
+                                            },
+                                        },
+                                    },
+                                    {name = "crTppResultVOMiscEnable",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Enable Result Overrides",
+                                        help = "Enables overriding the actual calculated results with the options below!",
+                                    },
+                                    {name = "crTppResultVOMiscBestTimeScoreMultiplier",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=this.infiniteRange,
+                                            default=1,
+                                        },
+                                        description = "Rank: Best Time Score Multiplier",
+                                        help = "Heighten or lessen your Best Score Time Score to adjust the effect of Mission Duration on your rank.",
+                                    },
+                                },
+                            },
                         },
                     },
                     {name = "crBankMenu",
@@ -599,6 +1254,248 @@ this.ultraVars = {
                             },
                         },
                     },
+                    {name = "crMedalMenu",
+                        type = "menu",
+                        setting = {},
+                        description = "Medal menu",
+                        help = "A sub-menu for changing mission scoring to your liking.",
+                        children = {
+                            -- {min=-math.huge,max=math.huge,increment=1}
+                            {name = "crMedalEnable",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Enable Awarding Medals",
+                                help = "Turns all features on this page on. Can't use any of them without it!",
+                            },
+                            {name = "crMedalMeritMenu",
+                                type = "menu",
+                                setting = {},
+                                description = "Merit Point menu",
+                                help = "A sub-menu for managing things to do with Merit Point rewards.",
+                                children = {
+                                    {name = "crMedalAwardMeritPointForStaff",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Merit: Award Merit Point For Staff",
+                                        help = "Enable earning merit points for your DD staff.",
+                                    },
+                                    {name = "crMedalAwardMeritPointForStaffConditionSRank",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Merit Condition: Require S-Rank",
+                                        help = "Sets the condition that you must achieve an S-Rank with your DD staff to earn Merit Points.",
+                                    },
+                                    {name = "crMedalAwardMeritPointForStaffConditionKillScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Merit Condition: Kill Score",
+                                        help = "Sets the condition that you must have a Kill Score of above zero with your DD staff to earn Merit Points.",
+                                    },
+                                    {name = "crMedalAwardMeritPointForStaffConditionAlertScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Merit Condition: Alert Score",
+                                        help = "Sets the condition that you must have an Alert Score of above zero with your DD staff to earn Merit Points.",
+                                    },
+                                    {name = "crMedalAwardMeritPointForStaffConditionGameOverScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Merit Condition: Game Over Score",
+                                        help = "Sets the condition that you must have an Game Over Score of above zero with your DD staff to earn Merit Points.",
+                                    },
+                                    {name = "crMedalAwardMeritPointForStaffConditionPerfectStealthNoKillBonusScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Merit Condition: Perfect Stealth No Kill Bonus Score",
+                                        help = "Sets the condition that you must have an Perfect Stealth No Kill Bonus Score of above zero with your DD staff to earn Merit Points.",
+                                    },
+                                },
+                            },
+                            {name = "crMedalCrossMedalMenu",
+                                type = "menu",
+                                setting = {},
+                                description = "Cross Medal menu",
+                                help = "A sub-menu for managing things to do with Cross Medal rewards.",
+                                children = {
+                                    {name = "crMedalAwardCrossMedalForStaff",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Cross: Award Cross Medal For Staff",
+                                        help = "Enable earning an Cross Medal for your DD staff.",
+                                    },
+                                    {name = "crMedalAwardCrossMedalForStaffConditionSRank",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Cross Condition: Require S-Rank",
+                                        help = "Sets the condition that you must achieve an S-Rank with your DD staff to earn an Cross Medal.",
+                                    },
+                                    {name = "crMedalAwardCrossMedalForStaffConditionKillScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Cross Condition: Kill Score",
+                                        help = "Sets the condition that you must have a Kill Score of above zero with your DD staff to earn an Cross Medal.",
+                                    },
+                                    {name = "crMedalAwardCrossMedalForStaffConditionAlertScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Cross Condition: Alert Score",
+                                        help = "Sets the condition that you must have an Alert Score of above zero with your DD staff to earn an Cross Medal.",
+                                    },
+                                    {name = "crMedalAwardCrossMedalForStaffConditionGameOverScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Cross Condition: Game Over Score",
+                                        help = "Sets the condition that you must have an Game Over Score of above zero with your DD staff to earn an Cross Medal.",
+                                    },
+                                    {name = "crMedalAwardCrossMedalForStaffConditionPerfectStealthNoKillBonusScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Cross Condition: Perfect Stealth No Kill Bonus Score",
+                                        help = "Sets the condition that you must have an Perfect Stealth No Kill Bonus Score of above zero with your DD staff to earn an Cross Medal.",
+                                    },
+                                },
+                            },
+                            {name = "crMedalHonorMedalMenu",
+                                type = "menu",
+                                setting = {},
+                                description = "Honor Medal menu",
+                                help = "A sub-menu for managing things to do with Honor Medal rewards.",
+                                children = {
+                                    {name = "crMedalAwardHonorMedalForStaff",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Honor: Award Honor Medal For Staff",
+                                        help = "Enable earning an Honor Medal for your DD staff.",
+                                    },
+                                    {name = "crMedalAwardHonorMedalForStaffConditionSRank",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Honor Condition: Require S-Rank",
+                                        help = "Sets the condition that you must achieve an S-Rank with your DD staff to earn an Honor Medal.",
+                                    },
+                                    {name = "crMedalAwardHonorMedalForStaffConditionKillScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Honor Condition: Kill Score",
+                                        help = "Sets the condition that you must have a Kill Score of above zero with your DD staff to earn an Honor Medal.",
+                                    },
+                                    {name = "crMedalAwardHonorMedalForStaffConditionAlertScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Honor Condition: Alert Score",
+                                        help = "Sets the condition that you must have an Alert Score of above zero with your DD staff to earn an Honor Medal.",
+                                    },
+                                    {name = "crMedalAwardHonorMedalForStaffConditionGameOverScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Honor Condition: Game Over Score",
+                                        help = "Sets the condition that you must have an Game Over Score of above zero with your DD staff to earn an Honor Medal.",
+                                    },
+                                    {name = "crMedalAwardHonorMedalForStaffConditionPerfectStealthNoKillBonusScore",
+                                        type = "ivar",
+                                        setting = {
+                                            save=IvarProc.CATEGORY_EXTERNAL,
+                                            range=Ivars.switchRange,
+                                            default=0,
+                                            settingNames="set_switch",
+                                        },
+                                        description = "Honor Condition: Perfect Stealth No Kill Bonus Score",
+                                        help = "Sets the condition that you must have an Perfect Stealth No Kill Bonus Score of above zero with your DD staff to earn an Honor Medal.",
+                                    },
+                                },
+                            },
+                        },
+                    },
                     {name = "crMiscMenu",
                         type = "menu",
                         setting = {},
@@ -617,17 +1514,6 @@ this.ultraVars = {
                                 },
                                 description = "Staff: Allow Volunteers",
                                 help = "Whether or not volunteer staff will appear.",
-                            },
-                            {name = "crResultAllowRankRestrictedItems",
-                                type = "ivar",
-                                setting = {
-                                    save=IvarProc.CATEGORY_EXTERNAL,
-                                    range=Ivars.switchRange,
-                                    default=0,
-                                    settingNames="set_switch",
-                                },
-                                description = "Rank: Allow Rank-Restricted Items",
-                                help = "Whether or not your rank will be docked for having a rank restricting item.",
                             },
                         },
                     },
@@ -832,11 +1718,6 @@ end
 
 --[[ === EVERYTHING ABOVE WAS BOILERPLATE THIS IS WHERE THE REAL CODE LIVES === ]]
 --[[ === UTILITY === ]]
-local clone = function(t)
-    local rtn = {}
-    for k, v in pairs(t) do rtn[k] = v end
-    return rtn
-end
 local formatLikeBalance = function(thingName, quantity)
     local sign = (quantity > 0 and "+") or (quantity < 0 and "-") or ""
     return "["..thingName.." "..sign..tostring(math.abs(quantity)).."]"
@@ -1027,6 +1908,83 @@ function this.RecomputeDeployTweaks()
     end
 end
 
+function this.RecomputeTppResultOverrides()
+    this.vars.livingTppResultCommonScoreParam = InfUtil.CopyTable(this.vars.interceptedTppResultCommonScoreParam)
+    if Ivars.crVOTppResultCommonScoreParamEnable:Is(1) then
+        this.vars.livingTppResultCommonScoreParam.noReflexBonus=Ivars.crTppResultCommonScoreParamsVOnoReflexBonus:Get()
+        this.vars.livingTppResultCommonScoreParam.noAlertBonus=Ivars.crTppResultCommonScoreParamsVOnoAlertBonus:Get()
+        this.vars.livingTppResultCommonScoreParam.noKillBonus=Ivars.crTppResultCommonScoreParamsVOnoKillBonus:Get()
+        this.vars.livingTppResultCommonScoreParam.noRetryBonus=Ivars.crTppResultCommonScoreParamsVOnoRetryBonus:Get()
+        this.vars.livingTppResultCommonScoreParam.perfectStealthNoKillBonus=Ivars.crTppResultCommonScoreParamsVOperfectStealthNoKillBonus:Get()
+        this.vars.livingTppResultCommonScoreParam.noTraceBonus=Ivars.crTppResultCommonScoreParamsVOnoTraceBonus:Get()
+        this.vars.livingTppResultCommonScoreParam.firstSpecialBonus=Ivars.crTppResultCommonScoreParamsVOfirstSpecialBonus:Get()
+        this.vars.livingTppResultCommonScoreParam.secondSpecialBonus=Ivars.crTppResultCommonScoreParamsVOsecondSpecialBonus:Get()
+        this.vars.livingTppResultCommonScoreParam.alertCount={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOalertCountValueToScoreRatio:Get()}
+        this.vars.livingTppResultCommonScoreParam.rediscoveryCount={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOrediscoveryCount:Get()}
+        this.vars.livingTppResultCommonScoreParam.takeHitCount={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOtakeHitCount:Get()}
+        this.vars.livingTppResultCommonScoreParam.tacticalActionPoint={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOtacticalActionPoint:Get()}
+        this.vars.livingTppResultCommonScoreParam.hostageCount={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOhostageCount:Get()}
+        this.vars.livingTppResultCommonScoreParam.markingCount={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOmarkingCount:Get()}
+        this.vars.livingTppResultCommonScoreParam.interrogateCount={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOinterrogateCount:Get()}
+        this.vars.livingTppResultCommonScoreParam.headShotCount={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOheadShotCount:Get()}
+        this.vars.livingTppResultCommonScoreParam.neutralizeCount={valueToScoreRatio=Ivars.crTppResultCommonScoreParamsVOneutralizeCount:Get()}
+
+        TppResult.COMMON_SCORE_PARAM = this.vars.livingTppResultCommonScoreParam
+    end
+
+    this.vars.livingTppResultRankThreshold = InfUtil.CopyTable(this.vars.interceptedTppResultRankThreshold)
+    if Ivars.crVOTppResultRankThresholdEnable:Is(1) then
+        this.vars.livingTppResultRankThreshold.S = Ivars.crTppResultRankThresholdVOrankS:Get()
+        this.vars.livingTppResultRankThreshold.A = Ivars.crTppResultRankThresholdVOrankA:Get()
+        this.vars.livingTppResultRankThreshold.B = Ivars.crTppResultRankThresholdVOrankB:Get()
+        this.vars.livingTppResultRankThreshold.C = Ivars.crTppResultRankThresholdVOrankC:Get()
+        this.vars.livingTppResultRankThreshold.D = Ivars.crTppResultRankThresholdVOrankD:Get()
+        this.vars.livingTppResultRankThreshold.E = Ivars.crTppResultRankThresholdVOrankE:Get()
+
+        TppResult.RANK_THRESHOLD = this.vars.livingTppResultRankThreshold
+    end
+
+    this.vars.livingTppResultRankBaseScore = InfUtil.CopyTable(this.vars.interceptedTppResultRankBaseScore)
+    if Ivars.crVOTppResultRankBaseScoreEnable:Is(1) then
+        this.vars.livingTppResultRankBaseScore.S = Ivars.crTppResultRankBaseScoreVOrankS:Get()
+        this.vars.livingTppResultRankBaseScore.A = Ivars.crTppResultRankBaseScoreVOrankA:Get()
+        this.vars.livingTppResultRankBaseScore.B = Ivars.crTppResultRankBaseScoreVOrankB:Get()
+        this.vars.livingTppResultRankBaseScore.C = Ivars.crTppResultRankBaseScoreVOrankC:Get()
+        this.vars.livingTppResultRankBaseScore.D = Ivars.crTppResultRankBaseScoreVOrankD:Get()
+        this.vars.livingTppResultRankBaseScore.E = Ivars.crTppResultRankBaseScoreVOrankE:Get()
+
+        TppResult.RANK_BASE_SCORE = this.vars.livingTppResultRankBaseScore
+    end
+
+    this.vars.livingTppResultRankBaseGMP = InfUtil.CopyTable(this.vars.interceptedTppResultRankBaseGMP)
+    if Ivars.crVOTppResultRankBaseGMPEnable:Is(1) then
+        this.vars.livingTppResultRankBaseGMP.S = Ivars.crTppResultRankBaseGMPVOrankS:Get()
+        this.vars.livingTppResultRankBaseGMP.A = Ivars.crTppResultRankBaseGMPVOrankA:Get()
+        this.vars.livingTppResultRankBaseGMP.B = Ivars.crTppResultRankBaseGMPVOrankB:Get()
+        this.vars.livingTppResultRankBaseGMP.C = Ivars.crTppResultRankBaseGMPVOrankC:Get()
+        this.vars.livingTppResultRankBaseGMP.D = Ivars.crTppResultRankBaseGMPVOrankD:Get()
+        this.vars.livingTppResultRankBaseGMP.E = Ivars.crTppResultRankBaseGMPVOrankE:Get()
+
+        TppResult.RANK_BASE_GMP = this.vars.livingTppResultRankBaseGMP
+    end
+
+    for missionCodeStr, missionVar in pairs(this.vars.interceptedTppResultRankBaseScorePerMission) do
+        --local res = TppResult["RANK_BASE_SCORE_"..missionCodeStr]
+        if missionVar ~= nil then
+            -- lol
+            if Ivars.crVOTppResultRankBaseScoreForceUseBase:Is(1) then
+                this.vars.livingTppResultRankBaseScorePerMission[missionCodeStr] = InfUtil.CopyTable(this.vars.livingTppResultRankBaseScore)
+            else
+                this.vars.livingTppResultRankBaseScorePerMission[missionCodeStr] = InfUtil.CopyTable(missionVar)
+                -- @TODO: lookup via menu that doesn't exist yet for each mission code with overrides
+            end
+        end
+
+        -- we don't do it rank by rank because the value is already defined here
+        TppResult["RANK_BASE_SCORE_"..missionCodeStr] = this.vars.livingTppResultRankBaseScorePerMission[missionCodeStr]
+    end
+end
+
 function this.BankPrintGMP()
     TppUiCommand.AnnounceLogView("Current Balance: "..formatLikeBalance("CRB", igvars.crBalance))
 end
@@ -1120,7 +2078,6 @@ function this.DirtyPlayer()
     end
     TppUiCommand.AnnounceLogView(logText)
 end
-
 
 function this.DemoOverride()
     if Ivars.crHygieneReallowQuietShowerCutscene:Get(1) and
@@ -1409,7 +2366,7 @@ function this.CaptureRegisterResourceParam(resource_params)
     if resource_params.resource ~= nil then
         if this.vars.interceptedResourceParam[resource_params.resource] == nil then
             this.vars.interceptedResourceParam[resource_params.resource] = resource_params
-            this.vars.livingResourceParam[resource_params.resource] = clone(resource_params)
+            this.vars.livingResourceParam[resource_params.resource] = InfUtil.CopyTable(resource_params)
 
             -- if we're editing do it here:
 
@@ -1436,7 +2393,7 @@ end
 
 function this.CaptureRegisterDeployBasicParam(basic_params)
     this.vars.interceptedDeployMissionBasicParams = basic_params
-    this.vars.livingDeployMissionBasicParams = clone(basic_params)
+    this.vars.livingDeployMissionBasicParams = InfUtil.CopyTable(basic_params)
 
     if next(this.vars.interceptedDeployMissionBasicParams) ~= nil then
         InfCore.Log("ChetRippo.CaptureRegisterDeployBasicParam initalizing", false, "debug")
@@ -1449,7 +2406,7 @@ function this.CaptureRegisterDeployMissionParam(mission_param)
     if mission_param.deployMissionId ~= nil then
         if this.vars.interceptedDeployMissionParams[mission_param.deployMissionId] == nil then
             this.vars.interceptedDeployMissionParams[mission_param.deployMissionId] = mission_param
-            this.vars.livingDeployMissionParams[mission_param.deployMissionId] = clone(mission_param)
+            this.vars.livingDeployMissionParams[mission_param.deployMissionId] = InfUtil.CopyTable(mission_param)
 
             -- survey for the time ranges to create a baseline scale range
             if mission_param.timeMinute > this.vars.timeMinuteMax then
@@ -1474,17 +2431,167 @@ function this.WrapAddVolunteerStaffs(...)
     end
     -- else: buzz off
 end
-function this.WrapIsUsedRankLimitedItem(...)
-    if Ivars.crResultAllowRankRestrictedItems:Is(1) then
-        this.wrap.TppResult.IsUsedRankLimitedItem(...)
+
+-- i really hate to essentially have to rewrite this
+function this.WrapRegistUsedLimitedItemLangId()
+    if Ivars.crVOTppResultRankLimitedItemsEnable:Is(1) then
+        mvars.res_isUsedRankLimitedItem=false
+        local rankRestrictionItems={
+            {PlayerPlayFlag.USE_CHICKEN_CAP,    "name_st_chiken",       Ivars.crTppResultRankRestrictedItemsChickCap:Is(1)},
+            {PlayerPlayFlag.USE_STEALTH,        "name_it_12043",        Ivars.crTppResultRankRestrictedItemsStealth:Is(1)},
+            {PlayerPlayFlag.USE_INSTANT_STEALTH,"name_it_12040",        Ivars.crTppResultRankRestrictedItemsInstantStealth:Is(1)},
+            {PlayerPlayFlag.USE_FULTON_MISSILE, "name_dw_31007",        Ivars.crTppResultRankRestrictedItemsFultonMissile:Is(1)},
+            {PlayerPlayFlag.USE_PARASITE_CAMO,  "name_it_13050",        Ivars.crTppResultRankRestrictedItemsParasiteCamo:Is(1)},
+            {PlayerPlayFlag.USE_MUGEN_BANDANA,  "name_st_37002",        Ivars.crTppResultRankRestrictedItemsMugenBandana:Is(1)},
+            {PlayerPlayFlag.USE_HIGHGRADE_EQUIP,"result_spcialitem_etc",Ivars.crTppResultRankRestrictedItemsHighGradeEquip:Is(1)},--RETAILPATCH: 1060 higrade added
+        }
+        for _,itemInfo in ipairs(rankRestrictionItems)do
+            if itemInfo[1] and bit.band(vars.playerPlayFlag,itemInfo[1])==itemInfo[1] and (not itemInfo[3]) then
+                mvars.res_isUsedRankLimitedItem=true
+                TppUiCommand.SetResultScore(itemInfo[2],"ranklimited")
+            end
+        end
+        if svars.isUsedSupportHelicopterAttack and (not mvars.res_rankLimitedSetting.permitSupportHelicopterAttack) and (not Ivars.crTppResultRankRestrictedItemHeliAttack:Is(1)) then
+            mvars.res_isUsedRankLimitedItem=true
+            TppUiCommand.SetResultScore("func_heli_attack","ranklimited")
+        end
+        if svars.isUsedFireSupport and (not mvars.res_rankLimitedSetting.permitFireSupport) and (not Ivars.crTppResultRankRestrictedItemFireSupport:Is(1)) then
+            mvars.res_isUsedRankLimitedItem=true
+            TppUiCommand.SetResultScore("func_spprt_battle","ranklimited")
+        end
+    else
+        CBox.wrap.TppResult.RegistUsedLimitedItemLangId()
     end
-    -- else: buzz off
 end
 
+function this.WrapIsUsedChickCap(...)
+    if Ivars.crVOTppResultRankLimitedItemsEnable:Is(1) and Ivars.crTppResultRankRestrictedItemsChickCap:Is(1) then
+        return false
+    else
+        return this.wrap.TppResult.IsUsedChickCap(...)
+    end
+end
 
-local function GenerateWrapper(path,wrapFunc)
+-- we don't want to wrap this function in particular but it gets called close to where we want so we're passing through
+function this.WrapUpdateGmpOnMissionClear(...)
+    if Ivars.crTppResultVOMiscEnable:Is(1) then
+        -- by this point, TppResult.CalcTimeScore has already been called:
+        svars.bestScoreTimeScore = svars.bestScoreTimeScore * Ivars.crTppResultVOMiscBestTimeScoreMultiplier:Get()
+    end
+
+    if Ivars.crMedalEnable:Is(1) then
+        -- no harm in getting this again ourselves, non-destructive
+        local baseScore, clearRank = TppResult.CalcBaseScore()
+        local is_dd = (vars.playerType==PlayerType.DD_MALE or vars.playerType==PlayerType.DD_FEMALE)
+
+        if is_dd then
+            local staffId = Player.GetStaffIdAtInstanceIndex(PlayerInfo.GetLocalPlayerIndex())
+
+            local merit_condition = true
+            if Ivars.crMedalAwardMeritPointForStaff:Get(1) then
+                if Ivars.crMedalAwardMeritPointForStaffConditionSRank:Get(1) then
+                    merit_condition = merit_condition and clearRank == TppDefine.MISSION_CLEAR_RANK.S
+                end
+                if Ivars.crMedalAwardMeritPointForStaffConditionKillScore:Get(1) then
+                    merit_condition = merit_condition and svars.bestScoreKillScore>0
+                end
+                if Ivars.crMedalAwardMeritPointForStaffConditionAlertScore:Get(1) then
+                    merit_condition = merit_condition and svars.bestScoreAlertScore>0
+                end
+                if Ivars.crMedalAwardMeritPointForStaffConditionGameOverScore:Get(1) then
+                    merit_condition = merit_condition and svars.bestScoreGameOverScore>0
+                end
+                if Ivars.crMedalAwardMeritPointForStaffConditionPerfectStealthNoKillBonusScore:Get(1) then
+                    merit_condition = merit_condition and svars.bestScorePerfectStealthNoKillBonusScore>0
+                end
+                if merit_condition then
+                    InfCore.Log("attempting meritmedalpoint...", true, "trace")
+                    TppMotherBaseManagement.AddStaffMeritMedalPointByStaffId({
+                        staffId=staffId,
+                        addPoint=clearRank,
+                    })
+                    --TODO: this funciton crashes without a clearRank :(
+                    --TppMotherBaseManagement.AwardedMeritMedalPointToPlayerStaff()
+                    InfCore.Log("survived meritmedalpoint...", true, "trace")
+                else
+                    InfCore.Log("did not earn meritmedalpoint...", true, "trace")
+                end
+            end
+
+            local cross_condition = true
+            if Ivars.crMedalAwardCrossMedalForStaff:Get(1) then
+                if Ivars.crMedalAwardCrossMedalForStaffConditionSRank:Get(1) then
+                    cross_condition = cross_condition and clearRank == TppDefine.MISSION_CLEAR_RANK.S
+                end
+                if Ivars.crMedalAwardCrossMedalForStaffConditionKillScore:Get(1) then
+                    cross_condition = cross_condition and svars.bestScoreKillScore>0
+                end
+                if Ivars.crMedalAwardCrossMedalForStaffConditionAlertScore:Get(1) then
+                    cross_condition = cross_condition and svars.bestScoreAlertScore>0
+                end
+                if Ivars.crMedalAwardCrossMedalForStaffConditionGameOverScore:Get(1) then
+                    cross_condition = cross_condition and svars.bestScoreGameOverScore>0
+                end
+                if Ivars.crMedalAwardCrossMedalForStaffConditionPerfectStealthNoKillBonusScore:Get(1) then
+                    cross_condition = cross_condition and svars.bestScorePerfectStealthNoKillBonusScore>0
+                end
+                if cross_condition then
+                    InfCore.Log("attempting crossmedal...", true, "trace")
+                    TppMotherBaseManagement.SetStaffCrossMedalByStaffId({
+                        staffId=staffId,
+                        got=true,
+                    })
+                    InfCore.Log("survived crossmedal...", true, "trace")
+                else
+                    InfCore.Log("did not earn crossmedal...", true, "trace")
+                end
+            end
+
+            local honor_condition = true
+            if Ivars.crMedalAwardHonorMedalForStaff:Get(1) then
+                if Ivars.crMedalAwardHonorMedalForStaffConditionSRank:Get(1) then
+                    honor_condition = honor_condition and clearRank == TppDefine.MISSION_CLEAR_RANK.S
+                end
+                if Ivars.crMedalAwardHonorMedalForStaffConditionKillScore:Get(1) then
+                    honor_condition = honor_condition and svars.bestScoreKillScore>0
+                end
+                if Ivars.crMedalAwardHonorMedalForStaffConditionAlertScore:Get(1) then
+                    honor_condition = honor_condition and svars.bestScoreAlertScore>0
+                end
+                if Ivars.crMedalAwardHonorMedalForStaffConditionGameOverScore:Get(1) then
+                    honor_condition = honor_condition and svars.bestScoreGameOverScore>0
+                end
+                if Ivars.crMedalAwardHonorMedalForStaffConditionPerfectStealthNoKillBonusScore:Get(1) then
+                    honor_condition = honor_condition and svars.bestScorePerfectStealthNoKillBonusScore>0
+                end
+                if honor_condition then
+                    InfCore.Log("attempting honormedal...", true, "trace")
+                    TppMotherBaseManagement.SetStaffHonorMedalByStaffId({
+                        staffId=staffId,
+                        got=true,
+                    })
+                    --TppMotherBaseManagement.AwardedHonorMedalToPlayerStaff()
+                    InfCore.Log("survived honormedal...", true, "trace")
+                else
+                    InfCore.Log("did not earn honormedal...", true, "trace")
+                end
+            end
+        end
+    end
+
+    InfCore.Log("attempting wrapped UpdateGmpOnMissionClear...", true, "trace")
+    -- we may need to use a reflector("TppResult.UpdateGmpOnMissionClear", ...) to prevent trapping the previous value
+    return CBox.wrap.TppResult.UpdateGmpOnMissionClear(...)
+end
+
+local function GenerateWrapper(path,wrapFunc,persist)
     local tree = InfUtil.Split(path, ".")
     local root = this.wrap
+    if persist then
+        root = CBox.wrap
+    end
+
+    -- travel to the destination depth
     local wrappingPath = _G
     local stop =  tree[#tree]
     for _, v in ipairs(tree) do
@@ -1497,6 +2604,7 @@ local function GenerateWrapper(path,wrapFunc)
         end
     end
 
+    -- if something else was already here then go home 
     if root[stop] == nil then
         root[stop] = wrappingPath[stop]
         wrappingPath[stop] = wrapFunc
@@ -1509,7 +2617,22 @@ GenerateWrapper("TppMotherBaseManagement.RegisterResourceParam", this.CaptureReg
 GenerateWrapper("TppMotherBaseManagement.RegisterDeployBasicParam", this.CaptureRegisterDeployBasicParam)
 GenerateWrapper("TppMotherBaseManagement.RegisterDeployMissionParam", this.CaptureRegisterDeployMissionParam)
 GenerateWrapper("TppTerminal.AddVolunteerStaffs", this.WrapAddVolunteerStaffs)
-GenerateWrapper("TppResult.IsUsedRankLimitedItem", this.WrapIsUsedRankLimitedItem)
+GenerateWrapper("TppResult.IsUsedChickCap", this.WrapIsUsedChickCap)
+GenerateWrapper("TppResult.UpdateGmpOnMissionClear", this.WrapUpdateGmpOnMissionClear, true)
+GenerateWrapper("TppResult.RegistUsedLimitedItemLangId", this.WrapRegistUsedLimitedItemLangId, true)
+
+function this.CaptureLooseVariables()
+    this.vars.interceptedTppResultCommonScoreParam = InfUtil.CopyTable(TppResult.COMMON_SCORE_PARAM)
+    this.vars.interceptedTppResultRankThreshold = InfUtil.CopyTable(TppResult.RANK_THRESHOLD)
+    this.vars.interceptedTppResultRankBaseScore = InfUtil.CopyTable(TppResult.RANK_BASE_SCORE)
+    this.vars.interceptedTppResultRankBaseGMP = InfUtil.CopyTable(TppResult.RANK_BASE_GMP)
+    for missionCodeStr, _ in pairs(TppDefine.MISSION_ENUM) do
+        local res = TppResult["RANK_BASE_SCORE_"..missionCodeStr]
+        if res ~= nil then
+            this.vars.interceptedTppResultRankBaseScorePerMission[missionCodeStr] = InfUtil.CopyTable(res)
+        end
+    end
+end
 
 --[[ == IH/IHHOOK STUFF HERE == ]]
 function this.Messages()
@@ -1579,7 +2702,9 @@ function this.Init(missionTable)
   this.messageExecTable=nil
   this.messageExecTable = Tpp.MakeMessageExecTable(this.Messages())
 
+  this.CaptureLooseVariables()
   this.RecomputeDeployTweaks()
+  this.RecomputeTppResultOverrides()
 end
 
 this.OnReload = this.Init
