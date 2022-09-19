@@ -34,6 +34,63 @@ this.wpMenu={
     },
 }
 
+this.loudencer = function(input)
+    local mt = input or {}
+    setmetatable(mt, {
+        __index = function(tbl,key)
+            InfCore.Log("[LOUDENCER] index ("..tostring(tbl)..")=>["..tostring(key).."]", false, "debug")
+        end,
+        __newindex = function(tbl,key,val)
+            InfCore.Log("[LOUDENCER] index ("..tostring(tbl)..")=>["..tostring(key).."] == ["..tostring(val) .. "]", false, "debug")
+        end,
+        -- __mode
+        __call = function(tbl, ...)
+            local think = "[LOUDENCER] call ("..tostring(tbl)..")=>["
+            for i=1,select("#",...) do
+                think = think .. tostring(i) .. ":" .. tostring(select(i,...)) .. ","
+            end
+            InfCore.Log(think .. "]", false, "debug")
+        end,
+        -- __metatable
+        __tostring = function(tbl)
+            InfCore.Log("[LOUDENCER] tostringing something!", false, "debug")
+            return "[LOUDENCER]"
+        end,
+        __len = function(tbl)
+            InfCore.Log("[LOUDENCER] len ("..tostring(tbl)..")", false, "debug")
+            return 1
+        end,
+        -- FoxEngine? __rt
+        -- FoxEngine? __as
+        -- FoxEngine? __vi
+
+        -- __pairs
+        -- __ipairs
+        -- __next
+        -- __gc
+        -- __name
+        -- __close
+        -- __unm
+        -- __add
+        -- __sub
+        -- __mul
+        -- __div
+        -- __idiv
+        -- __mod
+        -- __pow
+        -- __concat
+        -- __band
+        -- __bor
+        -- __bxor
+        -- __bnot
+        -- __shl
+        -- __shr
+        -- __eq
+        -- __lt
+        -- __le
+    })
+    return mt
+end
 
 function this.Rebuild()
     -- @TODO: rebuild all lookups in here
@@ -120,7 +177,98 @@ this.KnownRadioIDs = {
 }
 
 function this.WpGeneralPrint()
-    InfCore.PrintInspect(TppScriptVars.GetTotalPlayTime(),{varName="GetTotalPlayTime"})
+    --[[
+    local outtbl = {}
+    for i = 0, GameObject.NULL_ID, 1 do
+        local out = InfLookup.ObjectNameForGameId(i)
+        outtbl[i] = out
+    end
+    --InfCore.PrintInspect(TppScriptVars.GetTotalPlayTime(),{varName="GetTotalPlayTime"})
+    ]]
+    --[[
+    InfCore.PrintInspect(ChetRippo.vars.livingResourceParam,{varName="AssBlaster"})
+    for k, v in pairs(ChetRippo.vars.livingResourceParam) do
+        local usable = TppMotherBaseManagement.GetResourceUsableCount({
+            resource=k
+        })
+        InfCore.Log("hunk: [" .. k .. "] x "..usable .. ", (" .. v.baseSalePrice.. ")")
+    end
+
+    TppMotherBaseManagement.SaleResource{resource="BioticResource",count=3,isNew=true}
+    ]]
+
+    
+    InfCore.PrintInspect(TppWeather, {varName="TppWeather"})
+    InfCore.PrintInspect(InfWeather, {varName="InfWeather"})
+    --InfCore.PrintInspect(ChetRippo.vars, {varName="ChetRippo.vars"})
+    --InfCore.PrintInspect(TppResult, {varName="TppResult"})
+
+    --for missionCodeStr,enum in pairs(TppDefine.MISSION_ENUM)do
+    if Player.IsStaffInSortie(PlayerInfo.GetLocalPlayerIndex()) then
+        InfCore.Log("staff in sortie !!! ", true, "trace")
+    else
+        InfCore.Log("no staff in sortie ... ", true, "trace")
+    end
+
+    if vars.playerType == PlayerType.DD_FEMALE or vars.playerType == PlayerType.DD_MALE then
+        local staffId = Player.GetStaffIdAtInstanceIndex(PlayerInfo.GetLocalPlayerIndex())
+        --InfCore.Log("is DD, got staffId="..tostring(staffId).." ... ", true, "trace")
+
+        --InfCore.Log("gunning down ... ", true, "trace")
+        --TppMotherBaseManagement.SetRemoverReason(this.loudencer, this.loudencer, this.loudencer, this.loudencer)
+
+        --[[
+        InfCore.Log("attempting crossing 1 ... TppMotherBaseManagement.AddStaffMeritMedalPointByStaffId", true, "trace")
+        --InfCore.Log("murder attempted ... ", true, "trace")
+        TppMotherBaseManagement.AddStaffMeritMedalPointByStaffId(this.loudencer({staffId=staffId,addPoint=99}), this.loudencer(), this.loudencer(), this.loudencer())
+        InfCore.Log("attempting crossing 2 ... TppMotherBaseManagement.AwardedHonorMedalToStaff", true, "trace")
+        TppMotherBaseManagement.AwardedHonorMedalToStaff (this.loudencer({staffId=staffId}), this.loudencer(), this.loudencer(), this.loudencer())
+        InfCore.Log("attempting crossing 3 ... TppMotherBaseManagement.AwardedMeritMedalPointToPlayerStaff", true, "trace")
+        TppMotherBaseManagement.AwardedMeritMedalPointToPlayerStaff(this.loudencer({clearRank=TppDefine.MISSION_CLEAR_RANK.S}), this.loudencer(), this.loudencer(), this.loudencer())
+        InfCore.Log("attempting crossing 4 ... TppMotherBaseManagement.AwardedMeritMedalPointToStaff", true, "trace")
+        TppMotherBaseManagement.AwardedMeritMedalPointToStaff(this.loudencer({staffId=staffId}), this.loudencer(), this.loudencer(), this.loudencer())
+        InfCore.Log("attempting crossing 5 ... TppMotherBaseManagement.BanHeuy", true, "trace")
+        TppMotherBaseManagement.BanHeuy (this.loudencer(), this.loudencer(), this.loudencer(), this.loudencer())
+        ]]
+
+        -- >>> YOU WERE HERE LOOK HERE THIS IS WHAT YOU WERE DOING IGNORE EVERYTHING ELSE <<<
+        --[[
+        InfCore.Log("attempting crossing 1 ... TppMotherBaseManagement.GetOutOnMotherBaseStaffs", true, "trace")
+        local di = {TppMotherBaseManagement.GetOutOnMotherBaseStaffs(this.loudencer({sectionId=TppMotherBaseManagementConst.SECTION_COMBAT}),this.loudencer(),this.loudencer(),this.loudencer())}
+        InfCore.Log("was ... " .. tostring(type(di)), true, "trace")
+        InfCore.PrintInspect(di, {varName="TppMotherBaseManagement.GetOutOnMotherBaseStaffs"})
+        ]]
+
+        --[[
+        InfCore.Log("attempting crossing 2 ... DesDaemon.PrintDesObjectAll", true, "trace")
+        local x = DesDaemon.PrintDesObjectAll(di)
+        InfCore.Log("was ... " .. tostring(type(x)), true, "trace")
+        InfCore.PrintInspect(x, {varName="DesDaemon.PrintDesObjectAll"})
+        ]]
+
+        --[[
+            TppMotherBaseManagement.SetStaffCrossMedalByStaffId({staffId=0,got=bool})
+            
+            TppMotherBaseManagement.SetStaffHonorMedalByStaffId({staffId=0,got=bool})
+            TppMotherBaseManagement.AwardedHonorMedalToPlayerStaff() --no signature
+            TppMotherBaseManagement.AwardedHonorMedalToStaff({staffId=0})
+
+            TppMotherBaseManagement.AddStaffMeritMedalPointByStaffId({staffId=0,addPoint=number?})
+            TppMotherBaseManagement.AwardedMeritMedalPointToPlayerStaff({clearRank=number?})
+            TppMotherBaseManagement.AwardedMeritMedalPointToStaff({staffId=0,addPoint=number?}) --checks staffId before proceeding
+
+            CaptureCage.GetCaptureAnimalList() --no signature
+
+            DesDaemon.GetInstance() --no signature, returns userdata<Des.DesDaemon:Entity>
+            DesDaemon.PrintDesObjectAll(Entity) --returns userdata
+
+            HudCommonDataManager.GetInstance() --returns userdata
+        ]]
+    end
+
+    --TppUiCommand.SetGameOverType( "Cyprus" )
+    --TppMission.ShowGameOverMenu{}
+    --InfCore.PrintInspect(ChetRippo.vars,{varName="ChetRippo.vars"})
 end 
 
 -- igvars?
@@ -133,57 +281,16 @@ function this.OnScanRadioTarget(gameId, radioTargetId)
     end
 end
 
-function this.HurtBird(damagedId, attackId, attackerId)
-    local damagedType = GameObject.GetTypeIndex(damagedId)
-    if damagedType == TppGameObject.GAME_OBJECT_TYPE_CRITTER_BIRD then
-        local equipName = "EQP_SWP_Grenade_G05"
-        local equipId=TppEquip[equipName]
-
-        InfCore.DebugPrint("Bird had a '"..equipName..'". Why? Funy.')--DEBUG
-
-        local number=1
-        local linearMax=0.1
-        local angularMax=4
-        local dropOffsetY=1.2
-
-        local dropPosition=GameObject.SendCommand(damagedId,{id="GetPosition"})
-        if not dropPosition then
-            InfCore.Log("[WP] WARNING: WharfPromenade.HurtBird: GetPosition nil for damagedId:"..tostring(damagedId))
-
-            dropPosition=GameObject.SendCommand(attackerId,{id="GetPosition"})
-            if not dropPosition then
-                InfCore.Log("[WP] WARNING: WharfPromenade.HurtBird: GetPosition nil for attackerId:"..tostring(attackerId))
-            end
-
-            
-            dropPosition=TppPlayer.GetPosition()
-            if not dropPosition then
-                InfCore.Log("[WP] WARNING: WharfPromenade.HurtBird: GetPosition nil for desperate attempt :(((")
-            end
-        end
-
-        if dropPosition then
-            dropPosition=Vector3(dropPosition[1],dropPosition[2]+dropOffsetY,dropPosition[3])
-            local thing = TppPickable.DropItem({
-                equipId=equipId,
-                number=number,
-                position=dropPosition,
-                rotation=Quat.RotationY(0),
-                linearVelocity=Vector3(math.random(-linearMax,linearMax),math.random(-linearMax,linearMax),math.random(-linearMax,linearMax)),
-                angularVelocity=Vector3(math.random(-angularMax,angularMax),math.random(-angularMax,angularMax),math.random(-angularMax,angularMax)),
-            })
-            TppSoundDaemon.PostEvent("sfx_s_item_appear")
-        end
-    end
-end
-
 function this.Messages()
     return Tpp.StrCode32Table({
         Radio={
             {msg="EspionageRadioCandidate",func=this.OnScanRadioTarget}
         },
         GameObject={
-            {msg="Damage",func=this.HurtBird}
+            {msg="Damage",func=function(...)
+                --this.HurtBird(...)
+                --this.WolfPissed(...)
+            end}
         },
     })
 end

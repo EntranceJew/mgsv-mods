@@ -10,19 +10,21 @@ addFlag=16?
     OVERRIDES UNTIL IH UPDATES
 ]]
 -- https://stackoverflow.com/a/1283608
-InfUtil.MergeTable = function(t1, t2)
-    for k,v in pairs(t2) do
-        if type(v) == "table" then
-            if type(t1[k] or false) == "table" then
-                this.MergeTable(t1[k] or {}, t2[k] or {})
+if InfCore.modVersion <= 259 then
+    InfUtil.MergeTable = InfUtil.MergeTable or function(t1, t2)
+        for k,v in pairs(t2) do
+            if type(v) == "table" then
+                if type(t1[k] or false) == "table" then
+                    InfUtil.MergeTable(t1[k] or {}, t2[k] or {})
+                else
+                    t1[k] = v
+                end
             else
                 t1[k] = v
             end
-        else
-            t1[k] = v
         end
+        return t1
     end
-    return t1
 end
 
 local this = {
@@ -1612,6 +1614,117 @@ this.ultraVars = {
                     },
                 },
             },
+            {name = "crWeatherLocaleGenerator",
+                type = "menu",
+                setting = {},
+                description = "Weather Overrides menu",
+                help = "Everything that is to do with weather happens here.",
+                children = {
+                    {name = "crWeatherProbabilitiesTablesGenerator",
+                        type = "func",
+                        setting = {},
+                        func = function(parentMenu, depthIndex, depthValue)
+                            local o = {}
+
+                            local weatherSpots = {
+                                WeatherProbabilities = TppWeather.weatherProbabilitiesTable,
+                                ExtraWeatherProbabilities = TppWeather.extraWeatherProbabilitiesTable,
+                            }
+                            --[[
+                            if InfWeather then
+                                weatherSpots.InfWeatherProbabilities = InfWeather.weatherProbabilitiesTable
+                                weatherSpots.InfExtraWeatherProbabilities = InfWeather.weatherProbabilitiesTable
+                            end
+                            ]]
+                            for weatherSpotName, weatherSpot in pairs(weatherSpots) do
+                                local wsmenu = {name = "crWeatherLocaleGenerator"..weatherSpotName,
+                                    type = "menu",
+                                    setting = {},
+                                    description = weatherSpotName.." menu",
+                                    -- help = "Everything that is to do with weather happens here.",
+                                    children = {},
+                                }
+                                for location, probabilityTable in pairs(weatherSpot) do
+                                    local menu = {name = "crWeatherLocaleGenerator"..weatherSpotName.."_"..location,
+                                        type = "menu",
+                                        setting = {},
+                                        description = location.." Weather Probability menu",
+                                        -- help = "Everything that is to do with weather happens here.",
+                                        children = {},
+                                    }
+                                    local defaultLookup = {}
+                                    for _, probability in pairs(probabilityTable) do
+                                        defaultLookup[probability[1]] = probability[2]
+                                    end
+
+                                    for weatherName, weatherId in pairs(TppDefine.WEATHER) do
+                                        menu.children[#menu.children+1] = {
+                                            name = "crWeatherProbability"..weatherSpotName.."_"..location.."_"..weatherName,
+                                            type = "ivar",
+                                            setting = {
+                                                save=IvarProc.EXTERNAL,
+                                                default=defaultLookup[weatherId] or 0,
+                                                range=Ivars.percentRange,
+                                                isPercent=true,
+                                                OnChange=this.RecomputeWeather,
+                                            },
+                                            description = weatherName .. ": Probability",
+                                            -- help = "What is the most amount of time "..k.." weather should last?",
+                                        }
+                                    end
+                                    wsmenu.children[#wsmenu.children+1] = menu
+                                end
+                                o[#o+1] = wsmenu
+                            end
+
+                            return o
+                        end,
+                    },
+                },
+            },
+            {name = "crWeatherTestGenerator",
+                type = "menu",
+                setting = {},
+                description = "Weather Test Generator",
+                help = "What could this possibly do?",
+                children = {
+                    {name = "crWeatherDurationGenerator",
+                        type = "func",
+                        setting = {},
+                        description = "Weather Test Generator",
+                        help = "What could this possibly do?",
+                        func = function(parentMenu, depthIndex, depthValue)
+                            local o = {}
+                            for k, v in pairs(TppDefine.WEATHER) do
+                                o[#o+1] = {
+                                    name = "crWeatherGeneratorDuration" .. k .. "Min",
+                                    type = "ivar",
+                                    setting = {
+                                        save=IvarProc.EXTERNAL,
+                                        default=1000,
+                                        range=this.infiniteRange,
+                                    },
+                                    description = k .. ": Minimum Duration",
+                                    help = "What is the least amount of time "..k.." weather should last?",
+                                }
+                                o[#o+1] = {
+                                    name = "crWeatherGeneratorDuration" .. k .. "Max",
+                                    type = "ivar",
+                                    setting = {
+                                        save=IvarProc.EXTERNAL,
+                                        default=1000,
+                                        range=this.infiniteRange,
+                                    },
+                                    description = k .. ": Maximum Duration",
+                                    help = "What is the most amount of time "..k.." weather should last?",
+                                }
+                            end
+
+                            return o
+                        end,
+                    },
+                },
+            },
             -- [[ == NOT READY == ]]
             --[[
             {name = "crCombatBirdsDropItems",
@@ -1681,12 +1794,28 @@ this.ultraVars = {
 local namespace = "ChetRippo"
 function this.GenerateIvars(parentMenu, depthIndex, depthValue)
     local depthName = depthValue.name
-    this.langStrings.eng[depthName] = depthValue.description
-    this.langStrings.help.eng[depthName] = depthValue.help
+    if depthValue.type ~= nil and depthValue.type ~= "func" then
+        this.langStrings.eng[depthName] = depthValue.description
+        this.langStrings.help.eng[depthName] = depthValue.help
+    end
     local allow_debug = (depthValue.debug == true and (this.debugModule == true or Ivars.debugMode:Is(1))) or (depthValue.debug ~= true)
 
-    if allow_debug then
-        if depthValue.type ~= nil and depthValue.type == "menu" then
+    if allow_debug and depthValue.type ~= nil then
+        if depthValue.type == "func" then
+            local out = depthValue.func(parentMenu, depthIndex, depthValue)
+            local crab = InfUtil.Split(parentMenu, ".")
+            crab = crab[#crab]
+
+            -- step 2: eventually, don't be a submenu
+            for childIndex, childValue in pairs(out) do
+                --local subNs = (namespace .. "." .. depthName)
+                local outNs, outVal = this.GenerateIvars(parentMenu, childIndex, childValue)
+                table.insert(this[crab].options, outNs)
+            end
+
+            -- return (namespace .. "." .. depthName), this[depthName]
+            return
+        elseif depthValue.type == "menu" then
             table.insert(this.registerMenus, depthName)
             this[depthName] = depthValue.setting
             if parentMenu == nil then
@@ -1699,17 +1828,19 @@ function this.GenerateIvars(parentMenu, depthIndex, depthValue)
             for childName, childValue in pairs(depthValue.children) do
                 local subNs = (namespace .. "." .. depthName)
                 local outNs, outVal = this.GenerateIvars(subNs, childName, childValue)
-                table.insert(this[depthName].options, outNs)
+                if outNs ~= nil then
+                    table.insert(this[depthName].options, outNs)
+                end
             end
 
             return (namespace .. "." .. depthName), this[depthName]
-        elseif depthValue.type ~= nil and depthValue.type == "ivar" then
+        elseif depthValue.type == "ivar" then
             table.insert(this.registerIvars, depthName)
             this[depthName] = depthValue.setting
 
             -- set up the rest of the menu
             return ("Ivars." .. depthName), this[depthName]
-        elseif depthValue.type ~= nil and depthValue.type == "command" then
+        elseif depthValue.type == "command" then
             -- set up the rest of the menu
             return depthValue.setting.command, nil
         end
@@ -1906,6 +2037,10 @@ function this.RecomputeDeployTweaks()
 
         this.wrap.TppMotherBaseManagement.RegisterDeployMissionParam(mlive)
     end
+end
+
+function this.RecomputeWeather()
+
 end
 
 function this.RecomputeTppResultOverrides()
@@ -2696,20 +2831,7 @@ end
 function this.OnMessage(sender, messageId, ...)
     Tpp.DoMessage(this.messageExecTable, TppMission.CheckMessageOption, sender, messageId, ...)
 end
-
-function this.Init(missionTable)
-  -- NOTE: rebuilding in here has NEVER worked out well
-  this.messageExecTable=nil
-  this.messageExecTable = Tpp.MakeMessageExecTable(this.Messages())
-
-  this.CaptureLooseVariables()
-  this.RecomputeDeployTweaks()
-  this.RecomputeTppResultOverrides()
-end
-
-this.OnReload = this.Init
--- we have to do this part as early as possible for ivar related reasons
-function this.Rebuild()
+function this.Build()
     this.registerIvars={}
     this.registerMenus={}
     this.langStrings={
@@ -2722,9 +2844,53 @@ function this.Rebuild()
     for var, value in pairs(this.ultraVars) do
         this.GenerateIvars(nil, var, value)
     end
+end
+-- we have to do this part as early as possible for ivar related reasons
+function this.Rebuild()
+    this.Build()
     -- InfCore.PrintInspect(this, {varName="ChetRippo"})
     -- @TODO: rebuild all lookups in here
+    --this.DietIvarRebuild()
+    Ivars.PostAllModulesLoad()
+    InfLangProc.PostAllModulesLoad()
+    InfMenu.PostAllModulesLoad()
+    InfCore.Log("<><> we rebuilt",true,"debug")
 end
-this.Rebuild()
+function this.DietIvarRebuild()
+    for k,v in pairs(this.langStrings)do
+        --<lang>, help
+        for k2,v2 in pairs(v)do
+            --help.<lang>
+            if type(v2)=="table" and k=="help" then--tex KLUDGE settings are actually a table
+                for k3,v3 in pairs(v2)do
+                    InfLang[k][k2][k3]=v3
+                end
+            else
+                InfLang[k][k2]=v2
+            end
+        end
+    end
+    for _,name in pairs(this.registerIvars)do
+        Ivars[name]=this.BuildIvar(name,this[name])
+    end
+    
+end
+function this.Init(missionTable)
+  -- NOTE: rebuilding in here has NEVER worked out well
+  this.messageExecTable=nil
+  this.messageExecTable = Tpp.MakeMessageExecTable(this.Messages())
 
+  this.CaptureLooseVariables()
+end
+this.OnReload = function(missionTable)
+    this.Init(missionTable)
+    --this.Rebuild()
+end
+function this.PostAllModulesLoad()
+    this.Rebuild()
+    this.RecomputeDeployTweaks()
+    this.RecomputeTppResultOverrides()
+end
+
+this.Build()
 return this
