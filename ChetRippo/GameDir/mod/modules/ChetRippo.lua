@@ -2586,7 +2586,7 @@ function this.WrapRegistUsedLimitedItemLangId()
                 TppUiCommand.SetResultScore(itemInfo[2],"ranklimited")
             end
         end
-        if svars.isUsedSupportHelicopterAttack and (not mvars.res_rankLimitedSetting.permitSupportHelicopterAttack) and (not Ivars.crTppResultRankRestrictedItemHeliAttack:Is(1)) then
+        if svars.isUsedSupportHelicopterAttack and (not mvars.res_rankLimitedSetting.permitSupportHelicopterAttack) and (not Ivars.crTppResultRankRestrictedItemsHeliAttack:Is(1)) then
             mvars.res_isUsedRankLimitedItem=true
             TppUiCommand.SetResultScore("func_heli_attack","ranklimited")
         end
