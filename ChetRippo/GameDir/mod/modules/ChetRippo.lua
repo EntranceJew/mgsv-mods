@@ -2343,6 +2343,8 @@ end
 function this.SetInfiniteFulton()
     if Ivars.crInfiniteFultons:Is(1) and (not (mvars.mis_missionStateIsNotInGame or mvars.mis_loadRequest)) then
         Player.SetFultonCountInfinity(true)
+    else
+        Player.SetFultonCountInfinity(false)
     end
 end
 
