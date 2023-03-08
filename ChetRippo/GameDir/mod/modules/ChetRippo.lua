@@ -1517,6 +1517,17 @@ this.ultraVars = {
                                 description = "Staff: Allow Volunteers",
                                 help = "Whether or not volunteer staff will appear.",
                             },
+                            {name = "crInfiniteFultons",
+                                type = "ivar",
+                                setting = {
+                                    save=IvarProc.CATEGORY_EXTERNAL,
+                                    range=Ivars.switchRange,
+                                    default=0,
+                                    settingNames="set_switch",
+                                },
+                                description = "Infinite Fultons",
+                                help = "Sets whether fultons are limited or not.",
+                            },
                         },
                     },
                 },
@@ -2329,8 +2340,15 @@ function this.SyncLocalTime()
     end
 end
 
+function this.SetInfiniteFulton()
+    if Ivars.crInfiniteFultons:Is(1) and (not (mvars.mis_missionStateIsNotInGame or mvars.mis_loadRequest)) then
+        Player.SetFultonCountInfinity(true)
+    end
+end
+
 -- not OnUpdate
 function this.Update()
+    this.SetInfiniteFulton()
     this.SyncLocalTime()
 end
 
